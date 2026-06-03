@@ -479,14 +479,14 @@ function showPage(id){
 function goBack(){
   pageStack.pop();
   var prev=pageStack[pageStack.length-1]||'home';
-  showPage(prev);
+  showPage(prev==='culture'||prev==='xh'||prev==='ll'?'subject':prev);
   if(prev==='culture'||prev==='xh'||prev==='ll')renderSubject(prev);
 }
 
 function switchTab(tab){
   if(tab==='home'){showPage('home');pageStack=['home'];return;}
   pageStack=[tab];
-  showPage(tab);
+  showPage('subject');
   renderSubject(tab);
   document.querySelectorAll('.tab-item').forEach(function(t){
     t.classList.toggle('active',t.getAttribute('data-tab')===tab);
