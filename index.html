@@ -1118,27 +1118,100 @@ function showExamResult(){
 function showMockConfig(){
   pageStack.push('exam');showPage('exam');
   document.getElementById('headerTitle').textContent='🎯 模拟考场';
+  // Calculate distribution from real exam data
+  var dist=getExamDistribution();
   var html='<div class="mock-config"><div class="mc-title">🎯 ICA模拟考场</div>'+
-    '<div class="mc-sub">全真模拟考试 · 三科混合出题</div>'+
-    '<div class="mc-stat"><div><div class="ms-num">30</div><div class="ms-label">总题数</div></div>'+
+    '<div class="mc-sub">按真题分布随机生成试卷 · 每次不同</div>'+
+    '<div class="mc-stat"><div><div class="ms-num">'+dist.total+'</div><div class="ms-label">总题数</div></div>'+
     '<div><div class="ms-num">30min</div><div class="ms-label">考试时间</div></div>'+
     '<div><div class="ms-num">150</div><div class="ms-label">满分</div></div></div>'+
+    '<div style="font-size:12px;color:var(--text3);margin-bottom:16px;text-align:left;padding:0 10px">'+
+    '试卷构成（根据真题分布）：<br>'+
+    tabSubjects.map(function(s){return '&nbsp;&nbsp;'+icons[s]+' '+names[s]+'：约'+Math.round(dist.total*dist.subjectRatio[s])+'题';}).join('<br>')+
+    '<br>&nbsp;&nbsp;📝 选择题：约'+Math.round(dist.total*dist.typeRatio.choice*100)/100+'题'+
+    ' · 填空题：约'+Math.round(dist.total*dist.typeRatio.fill*100)/100+'题'+
+    ' · 判断题：约'+Math.round(dist.total*dist.typeRatio.judge*100)/100+'题</div>'+
     '<button class="mc-btn" onclick="startMock()">开始考试</button></div>';
   document.getElementById('page-exam').innerHTML=html;
 }
 
-function startMock(){
-  var all=[];
+function getExamDistribution(){
+  // Analyze all year-tagged questions to get real exam distribution
+  var years={};
   tabSubjects.forEach(function(s){
-    (subjectData[s]||[]).forEach(function(q){all.push({q:q,subject:s});});
+    (subjectData[s]||[]).forEach(function(q){
+      if(!q.year)return;
+      if(!years[q.year])years[q.year]={};
+      if(!years[q.year][s])years[q.year][s]={total:0,choice:0,fill:0,judge:0};
+      years[q.year][s].total++;
+      years[q.year][s][q.type]=(years[q.year][s][q.type]||0)+1;
+    });
   });
-  shuffle(all);
-  // Pick 30 random questions, ~10 per subject
-  var picked=all.slice(0,30);
+  // Aggregate all years
+  var agg={};
+  tabSubjects.forEach(function(s){agg[s]={total:0,choice:0,fill:0,judge:0};});
+  var totalAll=0;
+  var typeAgg={choice:0,fill:0,judge:0};
+  for(var y in years){
+    for(var si=0;si<tabSubjects.length;si++){
+      var s=tabSubjects[si];
+      if(years[y][s]){
+        agg[s].total+=years[y][s].total;
+        agg[s].choice+=years[y][s].choice||0;
+        agg[s].fill+=years[y][s].fill||0;
+        agg[s].judge+=years[y][s].judge||0;
+        totalAll+=years[y][s].total;
+        typeAgg.choice+=years[y][s].choice||0;
+        typeAgg.fill+=years[y][s].fill||0;
+        typeAgg.judge+=years[y][s].judge||0;
+      }
+    }
+  }
+  // Calculate ratios
+  var subjectRatio={};
+  var typeRatio={};
+  tabSubjects.forEach(function(s){
+    subjectRatio[s]=totalAll>0?agg[s].total/totalAll:1/3;
+  });
+  var typeTotal=typeAgg.choice+typeAgg.fill+typeAgg.judge;
+  typeRatio.choice=typeTotal>0?typeAgg.choice/typeTotal:0.7;
+  typeRatio.fill=typeTotal>0?typeAgg.fill/typeTotal:0.15;
+  typeRatio.judge=typeTotal>0?typeAgg.judge/typeTotal:0.15;
+  return {total:30,subjectRatio:subjectRatio,typeRatio:typeRatio};
+}
+
+function startMock(){
+  var dist=getExamDistribution();
+  var picked=[];
+  var totalMock=dist.total;
+  // Pick questions per subject following the distribution
+  tabSubjects.forEach(function(s){
+    var targetCount=Math.round(totalMock*dist.subjectRatio[s]);
+    var qPool=(subjectData[s]||[]).slice(); // copy
+    shuffle(qPool);
+    // Pick random questions from this subject
+    var subjectPicks=qPool.slice(0,Math.min(targetCount,qPool.length));
+    subjectPicks.forEach(function(q){picked.push({q:q,subject:s});});
+  });
+  // Fill remaining slots with random questions if needed
+  while(picked.length<totalMock){
+    var s=tabSubjects[Math.floor(Math.random()*tabSubjects.length)];
+    var qPool=(subjectData[s]||[]).slice();
+    shuffle(qPool);
+    for(var i=0;i<qPool.length;i++){
+      if(!picked.find(function(p){return p.q.id===qPool[i].id;})){
+        picked.push({q:qPool[i],subject:s});
+        break;
+      }
+    }
+  }
+  // Trim if overshot
+  if(picked.length>totalMock)picked=picked.slice(0,totalMock);
+  // Final shuffle
+  shuffle(picked);
   examQs=picked;examQIndex=0;examMode='mock';
   examStats={total:picked.length,correct:0,wrong:0};
-  examTimeLeft=30*60; // 30 minutes
-  // Start timer
+  examTimeLeft=30*60;
   if(examTimer)clearInterval(examTimer);
   examTimer=setInterval(function(){
     examTimeLeft--;
@@ -1249,12 +1322,16 @@ dSwitchPage=function(page){
   if(page==='mock'){
     document.getElementById('dHeaderTitle').textContent='🎯 模拟考场';
     document.getElementById('dHeaderSub').textContent='';
+    var dist=getExamDistribution();
     document.getElementById('dBody').innerHTML=
       '<div class="mock-config" style="max-width:500px"><div class="mc-title">🎯 ICA模拟考试</div>'+
-      '<div class="mc-sub">三科混合随机抽题 · 限时30分钟</div>'+
-      '<div class="mc-stat"><div><div class="ms-num">30</div><div class="ms-label">总题数</div></div>'+
+      '<div class="mc-sub">按真题分布随机生成试卷 · 每次不同</div>'+
+      '<div class="mc-stat"><div><div class="ms-num">'+dist.total+'</div><div class="ms-label">总题数</div></div>'+
       '<div><div class="ms-num">30min</div><div class="ms-label">考试时间</div></div>'+
       '<div><div class="ms-num">150</div><div class="ms-label">满分</div></div></div>'+
+      '<div style="font-size:12px;color:var(--text3);margin-bottom:16px;text-align:left;padding:0 10px">试卷构成（根据真题分布）：<br>'+
+      tabSubjects.map(function(s){return '&nbsp;&nbsp;'+icons[s]+' '+names[s]+'：约'+Math.round(dist.total*dist.subjectRatio[s])+'题';}).join('<br>')+
+      '<br>&nbsp;&nbsp;📝 选择题：约'+Math.round(dist.total*dist.typeRatio.choice*100)/100+'题 · 填空题：约'+Math.round(dist.total*dist.typeRatio.fill*100)/100+'题 · 判断题：约'+Math.round(dist.total*dist.typeRatio.judge*100)/100+'题</div>'+
       '<button class="mc-btn" onclick="dStartMock()">开始考试</button></div>';
     return;
   }
