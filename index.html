@@ -8,10 +8,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>ICA国际汉语教师 · 笔试刷题</title>
 <style>
-:root{--blue:#4A90D9;--blue-dark:#2C5F9E;--blue-light:#EBF2FA;--green:#43A047;--orange:#EF6C00;--red:#E53935;--bg:#F5F7FA;--card:#FFF;--text:#1A1A2E;--text2:#555;--text3:#9AA6B8;--border:#EEF1F5;--radius:14px;--safe-t:env(safe-area-inset-top,0px);--safe-b:env(safe-area-inset-bottom,0px);--tab-h:56px}
+:root{--blue:#4A90D9;--blue-dark:#2C5F9E;--blue-light:#EBF2FA;--green:#43A047;--orange:#EF6C00;--red:#E53935;--bg:#F5F7FA;--card:#FFF;--text:#1A1A2E;--text2:#555;--text3:#9AA6B8;--border:#EEF1F5;--radius:14px;--safe-t:env(safe-area-inset-top,0px);--safe-b:env(safe-area-inset-bottom,0px);--tab-h:56px;--sidebar-w:220px}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",sans-serif;background:var(--bg);color:var(--text);font-size:16px;line-height:1.5;height:100%;overflow:hidden;-webkit-text-size-adjust:100%}
 input,select,textarea,button{font-family:inherit;font-size:inherit}
+
 /* ====== Login ====== */
 .login-page{position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;background:var(--bg);padding:20px;transition:opacity .3s}
 .login-page.hide{opacity:0;pointer-events:none}
@@ -37,22 +38,40 @@ input,select,textarea,button{font-family:inherit;font-size:inherit}
 .btn-login{width:100%;padding:14px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:#FFF;font-size:17px;font-weight:600;cursor:pointer;min-height:50px;letter-spacing:1px}
 .btn-login:active{opacity:.85}.btn-login:disabled{opacity:.5;cursor:not-allowed}
 .login-footer{text-align:center;margin-top:22px;font-size:11px;color:#C0C8D4}
-/* ====== App Shell ====== */
-.app{display:none;height:100%;width:100%;flex-direction:column}
-.app.show{display:flex}
-/* Header */
-.app-header{background:var(--card);padding:calc(12px + var(--safe-t)) 16px 12px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);flex-shrink:0}
+
+/* ====== App Shell (Mobile First) ====== */
+.app{display:none;height:100%;width:100%}
+.app.show{display:flex;flex-direction:column}
+.app.show.desktop{flex-direction:row}
+
+/* Mobile Header */
+.app-header{background:var(--card);padding:calc(12px+var(--safe-t)) 16px 12px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);flex-shrink:0}
 .app-header .h-title{font-size:17px;font-weight:700;flex:1;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .app-header .h-back{font-size:24px;background:none;border:none;cursor:pointer;color:var(--text);padding:4px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:10px}
 .app-header .h-back:active{background:#F0F2F6}
-.app-header .h-right{width:36px}
 .app-header .h-back.hidden{visibility:hidden}
-/* Main Content */
-.app-content{flex:1;overflow-y:auto;padding:0 0 calc(var(--tab-h) + var(--safe-b));-webkit-overflow-scrolling:touch}
+.app-header .h-right{width:36px}
+
+/* Content */
+.app-content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 0 calc(var(--tab-h)+var(--safe-b))}
 .page{display:none;padding:16px;animation:fadeIn .25s}
 .page.active{display:block}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-/* ====== Home Page ====== */
+
+/* Bottom Tab Bar (Mobile) */
+.tab-bar{position:fixed;bottom:0;left:0;right:0;z-index:100;background:var(--card);border-top:1px solid var(--border);display:flex;padding:4px 0 calc(4px+var(--safe-b));height:calc(var(--tab-h)+var(--safe-b))}
+.tab-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border:none;background:none;cursor:pointer;color:var(--text3);font-size:10px;padding:4px 2px;transition:color .15s}
+.tab-item .ti-icon{font-size:22px;line-height:1}
+.tab-item.active{color:var(--blue)}
+.tab-item:active{opacity:.7}
+.tab-bar.hide{display:none}
+
+/* Logout Button (Mobile) */
+.logout-btn{position:fixed;bottom:calc(80px+var(--safe-b));right:16px;z-index:99;width:44px;height:44px;border-radius:50%;background:var(--card);border:1px solid var(--border);box-shadow:0 2px 12px rgba(0,0,0,.08);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;color:var(--text3);transition:all .15s}
+.logout-btn:active{transform:scale(.9);background:#FFF5F5;color:var(--red)}
+.logout-btn.hide{display:none}
+
+/* ====== Home (Mobile) ====== */
 .home-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
 .home-stat{background:var(--card);border-radius:var(--radius);padding:14px;text-align:center;border:1px solid var(--border)}
 .home-stat .hs-num{font-size:22px;font-weight:700;line-height:1.2}
@@ -75,7 +94,8 @@ input,select,textarea,button{font-family:inherit;font-size:inherit}
 .home-c2 .home-card .hc-icon{margin-bottom:8px}
 .home-c2 .home-card .hc-name{font-size:14px}
 .home-c2 .home-card .hc-count{margin-top:0;margin-bottom:8px}
-/* ====== Subject Question List ====== */
+
+/* ====== Subject List (Mobile Cards) ====== */
 .filter-bar{background:var(--card);border-radius:var(--radius);padding:12px;margin-bottom:12px;border:1px solid var(--border)}
 .filter-row{display:flex;gap:8px;margin-bottom:8px}
 .filter-row:last-child{margin-bottom:0}
@@ -87,7 +107,7 @@ input,select,textarea,button{font-family:inherit;font-size:inherit}
 .filter-toggle:active{opacity:.7}
 .filter-body{display:none;padding-top:8px}
 .filter-body.open{display:block}
-/* Question Cards */
+
 .q-list{display:flex;flex-direction:column;gap:10px;padding-bottom:8px}
 .q-card{background:var(--card);border-radius:var(--radius);padding:14px 16px;border:1px solid var(--border);cursor:pointer;transition:all .15s}
 .q-card:active{background:#FAFBFD;transform:scale(.98)}
@@ -101,8 +121,9 @@ input,select,textarea,button{font-family:inherit;font-size:inherit}
 .q-card .qc-text{font-size:14px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .q-card .qc-meta{font-size:11px;color:var(--text3);margin-top:6px}
 .q-empty{padding:40px 20px;text-align:center;color:var(--text3);font-size:14px}
-/* ====== Question Detail Page ====== */
-.qd-wrap{padding:0;animation:fadeIn .2s}
+
+/* ====== Question Detail ====== */
+.qd-wrap{padding:0}
 .qd-card{background:var(--card);border-radius:var(--radius);padding:20px;border:1px solid var(--border);margin-bottom:12px}
 .qd-type{font-size:12px;color:var(--blue);font-weight:600;margin-bottom:6px}
 .qd-text{font-size:17px;font-weight:500;line-height:1.6;margin-bottom:16px}
@@ -123,18 +144,8 @@ input,select,textarea,button{font-family:inherit;font-size:inherit}
 .qd-nav .btn:disabled{opacity:.4;cursor:not-allowed}
 .qd-nav .btn:active:not(:disabled){transform:scale(.97)}
 .qd-counter{text-align:center;font-size:12px;color:var(--text3);padding:8px 0 4px}
-/* ====== Bottom Tab ====== */
-.tab-bar{position:fixed;bottom:0;left:0;right:0;z-index:100;background:var(--card);border-top:1px solid var(--border);display:flex;padding:4px 0 calc(4px + var(--safe-b));height:calc(var(--tab-h) + var(--safe-b));flex-shrink:0}
-.tab-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border:none;background:none;cursor:pointer;color:var(--text3);font-size:10px;padding:4px 2px;transition:color .15s}
-.tab-item .ti-icon{font-size:22px;line-height:1}
-.tab-item.active{color:var(--blue)}
-.tab-item:active{opacity:.7}
-.tab-bar.hide{display:none}
-/* ====== Logout Button ====== */
-.logout-btn{position:fixed;bottom:calc(80px + var(--safe-b));right:16px;z-index:99;width:44px;height:44px;border-radius:50%;background:var(--card);border:1px solid var(--border);box-shadow:0 2px 12px rgba(0,0,0,.08);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;color:var(--text3);transition:all .15s}
-.logout-btn:active{transform:scale(.9);background:#FFF5F5;color:var(--red)}
-.logout-btn.hide{display:none}
-/* ====== Modal ====== */
+
+/* ====== Modal (Mobile Sheet) ====== */
 .modal-overlay{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.4);align-items:flex-end;justify-content:center}
 .modal-overlay.show{display:flex}
 .modal{border-radius:16px 16px 0 0;width:100%;max-width:480px;max-height:85vh;background:var(--card);display:flex;flex-direction:column;animation:slideUp .25s}
@@ -151,7 +162,6 @@ input,select,textarea,button{font-family:inherit;font-size:inherit}
 .modal-body .form-row-inline{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .modal-footer{display:flex;gap:10px;padding:12px 20px 20px;border-top:1px solid var(--border);flex-shrink:0}
 .modal-footer .btn{flex:1;padding:11px;border:none;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;text-align:center}
-/* Preview in modal */
 .preview-content{line-height:1.7;font-size:14px}
 .preview-content .pq-type{font-size:11px;color:var(--blue);font-weight:600;margin-bottom:4px}
 .preview-content .pq-text{font-size:16px;font-weight:500;margin-bottom:12px}
@@ -164,9 +174,95 @@ input,select,textarea,button{font-family:inherit;font-size:inherit}
 /* Toast */
 .toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:250;background:rgba(0,0,0,.75);color:#FFF;padding:10px 20px;border-radius:10px;font-size:14px;pointer-events:none;opacity:0;transition:opacity .3s}
 .toast.show{opacity:1}
-/* Utilities */
-.text-center{text-align:center}
-.mb8{margin-bottom:8px}
+
+/* ====== Desktop Sidebar ====== */
+.desktop-sidebar{display:none}
+.desktop-main{display:none}
+.sidebar{width:var(--sidebar-w);background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+.sidebar-header{padding:24px 18px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.sidebar-logo{width:36px;height:36px;background:linear-gradient(135deg,var(--blue),var(--blue-dark));border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sidebar-logo span{font-size:14px;color:#FFF;font-weight:700}
+.sidebar-user{flex:1;overflow:hidden}
+.sidebar-user .un{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sidebar-user .ur{font-size:10px;color:var(--text3);margin-top:1px}
+.sidebar-nav{flex:1;padding:10px 8px;overflow-y:auto}
+.s-nav{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text2);transition:all .12s;margin-bottom:2px;border:none;background:none;width:100%;text-align:left;font-family:inherit}
+.s-nav:hover{background:#F5F7FA;color:var(--text)}
+.s-nav.active{background:var(--blue-light);color:var(--blue);font-weight:600}
+.s-nav .s-icon{font-size:16px;width:22px;text-align:center;flex-shrink:0}
+.s-nav .s-badge{margin-left:auto;background:var(--blue);color:#FFF;font-size:10px;font-weight:600;padding:1px 7px;border-radius:8px}
+.sidebar-footer{padding:12px 8px;border-top:1px solid var(--border)}
+.s-nav.logout{color:var(--red)}.s-nav.logout:hover{background:#FFF5F5}
+
+/* Desktop content area */
+.d-main{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+.d-header{background:var(--card);padding:16px 24px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;gap:12px}
+.d-header h2{font-size:18px;font-weight:700;flex:1}
+.d-header .d-sub{font-size:12px;color:var(--text3)}
+.d-body{flex:1;overflow-y:auto;padding:20px 24px}
+
+/* Desktop Table */
+.d-table-wrap{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden}
+.d-table-wrap table{width:100%;border-collapse:collapse}
+.d-table-wrap thead{background:#F7F9FC}
+.d-table-wrap th{text-align:left;padding:10px 14px;font-size:12px;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap}
+.d-table-wrap td{padding:10px 14px;font-size:13px;color:var(--text);border-bottom:1px solid #F5F6F8;vertical-align:middle}
+.d-table-wrap tr:last-child td{border-bottom:none}
+.d-table-wrap tr:hover td{background:#FAFBFD}
+.d-table-wrap td .q-text{max-width:360px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+.d-table-wrap .tag{display:inline-block;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:500}
+.d-table-wrap .tag-choice{background:#E3F2FD;color:#1565C0}
+.d-table-wrap .tag-fill{background:#E8F5E9;color:#2E7D32}
+.d-table-wrap .tag-judge{background:#FFF3E0;color:#E65100}
+.d-table-wrap .tag-short{background:#F3E5F5;color:#7B1FA2}
+.d-empty{text-align:center;padding:40px 16px;color:var(--text3);font-size:14px}
+
+/* Desktop home stat cards */
+.d-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px}
+.d-stat{background:var(--card);border-radius:var(--radius);padding:18px;border:1px solid var(--border)}
+.d-stat .ds-icon{font-size:22px;margin-bottom:6px}
+.d-stat .ds-num{font-size:26px;font-weight:700}
+.d-stat .ds-label{font-size:12px;color:var(--text3);margin-top:2px}
+.d-stat.blue .ds-num{color:var(--blue)}
+.d-stat.green .ds-num{color:var(--green)}
+.d-stat.orange .ds-num{color:var(--orange)}
+
+/* Desktop subject cards */
+.d-subj-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
+
+/* ====== Desktop Media Queries ====== */
+@media(min-width:768px){
+  .app.show.desktop{display:flex}
+  .app-header,.tab-bar,.logout-btn{display:none!important}
+  .desktop-sidebar{display:flex;flex-direction:column}
+  .desktop-main{display:flex;flex-direction:column;flex:1}
+  .app-content{padding:0!important}
+  .d-body .filter-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:0;background:none;border:none;margin-bottom:16px}
+  .d-body .filter-row{margin-bottom:0}
+  .d-body .filter-toggle{display:none}
+  .d-body .filter-body{display:flex!important;gap:10px;align-items:center;padding:0;flex-wrap:wrap}
+  .d-body .filter-body .filter-row{gap:8px;margin:0}
+  .d-body .filter-row select,.d-body .filter-row input{padding:7px 10px;min-height:34px;font-size:12px}
+  .d-body .filter-row .btn{padding:7px 14px;min-height:34px;font-size:12px}
+  .d-body .q-card{display:none}
+  .d-body .q-empty{padding:30px 16px;font-size:13px}
+  .page{padding:0}
+  .d-body .qd-wrap{max-width:800px}
+  .d-body .qd-card{padding:24px;margin-bottom:14px}
+  .d-body .qd-text{font-size:18px}
+  .d-body .qd-nav .btn{padding:10px 20px}
+}
+
+/* ====== Desktop Table ====== */
+.d-body .d-table-wrap{display:block}
+.d-body .q-list.cards-only{display:none}
+
+@media(max-width:767px){
+  .desktop-sidebar,.desktop-main,.d-table-wrap,.d-stats,.d-subj-grid{display:none!important}
+}
+
+/* ====== Utility ====== */
+.f12{font-size:12px}.f14{font-size:14px}.cg{color:var(--text3)}.mb8{margin-bottom:8px}.mb12{margin-bottom:12px}.fw6{font-weight:600}
 </style>
 </head>
 <body>
@@ -196,21 +292,49 @@ input,select,textarea,button{font-family:inherit;font-size:inherit}
   <div class="login-footer">ICA International Chinese Language Teacher Certification</div>
 </div></div>
 
-<!-- ====== App ====== -->
+<!-- ====== App (Mobile) ====== -->
 <div class="app" id="pageApp">
-  <!-- Header -->
+  <!-- Mobile Header -->
   <div class="app-header">
     <button class="h-back hidden" id="headerBack" onclick="goBack()">‹</button>
     <span class="h-title" id="headerTitle">题库管理</span>
     <div class="h-right"></div>
   </div>
-  <!-- Content -->
+
+  <!-- Desktop Sidebar -->
+  <div class="desktop-sidebar" id="desktopSidebar">
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo"><span>ICA</span></div>
+        <div class="sidebar-user"><div class="un" id="dUserName">admin</div><div class="ur">笔试刷题系统</div></div>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="s-nav active" data-dpage="home" onclick="dSwitchPage('home')"><span class="s-icon">🏠</span> 首页</button>
+        <button class="s-nav" data-dpage="culture" onclick="dSwitchPage('culture')"><span class="s-icon">🏯</span> 中国文化<span class="s-badge" id="dBC">45</span></button>
+        <button class="s-nav" data-dpage="xh" onclick="dSwitchPage('xh')"><span class="s-icon">🗣️</span> 现代汉语<span class="s-badge" id="dBX">35</span></button>
+        <button class="s-nav" data-dpage="ll" onclick="dSwitchPage('ll')"><span class="s-icon">📚</span> 教学理论<span class="s-badge" id="dBL">30</span></button>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="s-nav logout" onclick="doLogout()"><span class="s-icon">🚪</span> 退出登录</button>
+      </div>
+    </div>
+    <!-- Desktop main area -->
+    <div class="desktop-main">
+      <div class="d-header" id="dHeader">
+        <h2 id="dHeaderTitle">📚 题库管理</h2>
+        <div class="d-sub" id="dHeaderSub"></div>
+      </div>
+      <div class="d-body" id="dBody"></div>
+    </div>
+  </div>
+
+  <!-- Mobile Content -->
   <div class="app-content" id="appContent">
     <div class="page active" id="page-home">
       <div class="home-stats">
         <div class="home-stat"><div class="hs-num blue" id="hTotal">0</div><div class="hs-label">总题量</div></div>
         <div class="home-stat"><div class="hs-num green">3</div><div class="hs-label">科目</div></div>
-        <div class="home-stat"><div class="hs-num orange">0</div><div class="hs-label">真题套卷</div></div>
+        <div class="home-stat"><div class="hs-num orange" id="hPapers">0</div><div class="hs-label">真题套卷</div></div>
       </div>
       <div class="section-label">专项题库</div>
       <div class="home-cards" id="subjectCards"></div>
@@ -220,24 +344,21 @@ input,select,textarea,button{font-family:inherit;font-size:inherit}
         <div class="home-card" onclick="toast('模块开发中')"><div class="hc-icon" style="background:#FFF3E0">🎯</div><div class="hc-name">模拟考场</div><div class="hc-count" style="font-size:11px;color:var(--text3)">全真限时考试</div></div>
       </div>
     </div>
-    <!-- Subject pages rendered dynamically -->
     <div class="page" id="page-subject"></div>
-    <!-- Question detail -->
     <div class="page" id="page-qdetail"></div>
   </div>
 
-  <!-- Bottom Tab -->
+  <!-- Bottom Tab Bar (Mobile) -->
   <div class="tab-bar" id="tabBar">
     <button class="tab-item active" data-tab="home" onclick="switchTab('home')"><span class="ti-icon">🏠</span>首页</button>
     <button class="tab-item" data-tab="culture" onclick="switchTab('culture')"><span class="ti-icon">🏯</span>文化</button>
     <button class="tab-item" data-tab="xh" onclick="switchTab('xh')"><span class="ti-icon">🗣️</span>现代汉语</button>
     <button class="tab-item" data-tab="ll" onclick="switchTab('ll')"><span class="ti-icon">📚</span>教学理论</button>
   </div>
-  <!-- Logout -->
   <button class="logout-btn" id="logoutBtn" onclick="doLogout()">🚪</button>
 </div>
 
-<!-- ====== Modal (preview/edit) ====== -->
+<!-- ====== Modal ====== -->
 <div class="modal-overlay" id="modalForm">
   <div class="modal">
     <div class="modal-header"><h3 id="modalFormTitle">题目</h3><button class="modal-close" onclick="closeModal('modalForm')">✕</button></div>
@@ -274,14 +395,11 @@ input,select,textarea,button{font-family:inherit;font-size:inherit}
     </div>
   </div>
 </div>
-
-<!-- Toast -->
 <div class="toast" id="toast"></div>
 
 <script>
 // ====== Data ======
 var subjectData = {};
-// 中国文化 45题
 subjectData.culture = [
 {id:'c01',type:'choice',diff:'easy',year:'2025',chapter:'folk',text:'以下哪个是中国传统节日？',options:['A.圣诞节','B.中秋节','C.复活节'],answer:'B',explain:'中秋节是中国传统节日之一。'},
 {id:'c02',type:'choice',diff:'mid',year:'2025',chapter:'folk',text:'以下属于中国古代四大名著的是？（多选）',options:['A.《西游记》','B.《聊斋志异》','C.《红楼梦》','D.《三国演义》'],answer:'ACD',explain:'四大名著是《西游记》《红楼梦》《三国演义》《水浒传》。'},
@@ -329,7 +447,6 @@ subjectData.culture = [
 {id:'wh_29',type:'fill',diff:'mid',year:'2025',chapter:'folk',text:'四大菜系包括鲁菜、川菜、粤菜和______。',options:[],answer:'苏菜'},
 {id:'wh_30',type:'choice',diff:'hard',year:'2025',chapter:'phil',text:'"人性本恶"是哪位思想家的观点？',options:['A.孟子','B.老子','C.荀子','D.墨子'],answer:'C'},
 ];
-// 现代汉语 35题
 subjectData.xh = [
 {id:'xh1',type:'choice',diff:'easy',year:'2024',chapter:'grammar',text:'下列哪个汉字的声调是阳平？',options:['A.天','B.地','C.河','D.月'],answer:'C',explain:'"河"读hé，阳平。'},
 {id:'xh2',type:'choice',diff:'easy',year:'2024',chapter:'grammar',text:'"昨天"在句中是？',options:['A.主语','B.谓语','C.宾语','D.时间状语'],answer:'D',explain:'"昨天"是时间状语。'},
@@ -367,7 +484,6 @@ subjectData.xh = [
 {id:'xh34',type:'fill',diff:'mid',year:'2025',chapter:'grammar',text:'"蝴蝶"是一个______词。',options:[],answer:'单纯'},
 {id:'xh35',type:'choice',diff:'mid',year:'2025',chapter:'grammar',text:'"请你把书放在桌子上"中"放"是？',options:['A.主语','B.谓语','C.宾语','D.状语'],answer:'B'},
 ];
-// 教学理论 30题
 subjectData.ll = [
 {id:'ll1',type:'choice',diff:'easy',year:'2025',chapter:'method',text:'对外汉语教学的根本目的是？',options:['A.教授语法','B.培养阅读能力','C.培养交际能力','D.传播文化'],answer:'C'},
 {id:'ll2',type:'choice',diff:'mid',year:'2025',chapter:'method',text:'"中介语"是指？',options:['A.双语翻译','B.二语学习者语言系统','C.口语书面语之间'],answer:'B'},
@@ -405,17 +521,18 @@ subjectData.ll = [
 var ACCOUNTS = {admin:'admin123',teacher:'teacher123',dev:'dev123'};
 var currentUser = '';
 var editingSubject = '', editingId = null, deleteTargetId = null, deleteSubject = '';
-var currentSubject = '';
-var currentQIndex = 0;
-var filteredQs = [];
+var currentSubject = '', currentQIndex = 0, filteredQs = [];
 var tabSubjects = ['culture','xh','ll'];
-var tabNames = {home:'首页',culture:'中国文化',xh:'现代汉语',ll:'教学理论'};
-var tabIcons = {home:'🏠',culture:'🏯',xh:'🗣️',ll:'📚'};
-var subjectIcons = {culture:'🏯',xh:'🗣️',ll:'📚'};
-var subjectColors = {culture:'#E65100',xh:'#4A90D9',ll:'#2E7D32'};
+var tabNames = {home:'首页',culture:'中国文化',xh:'现代汉语',ll:'教学理论',subject:'题库',qdetail:'题目详情'};
+var names = {culture:'中国文化',xh:'现代汉语',ll:'对外汉语教学理论'};
+var icons = {culture:'🏯',xh:'🗣️',ll:'📚'};
+var colors = {culture:'#E65100',xh:'#4A90D9',ll:'#2E7D32'};
 var typeLabels = {choice:'选择',fill:'填空',judge:'判断',short:'简答'};
 var typeClass = {choice:'choice',fill:'fill',judge:'judge',short:'short'};
+var typeNames = {choice:'选择题',fill:'填空题',judge:'判断题',short:'简答题'};
+var diffLabels = {easy:'容易',mid:'中等',hard:'困难'};
 
+// Login
 document.getElementById('togglePw').addEventListener('click',function(){var p=document.getElementById('loginPw');p.type=p.type==='password'?'text':'password';this.textContent=p.type==='password'?'👁️':'🙈';});
 document.getElementById('loginPw').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
 document.getElementById('loginId').addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('loginPw').focus();});
@@ -447,9 +564,12 @@ function enterApp(user){
   currentUser=user;
   document.getElementById('pageLogin').classList.add('hide');
   document.getElementById('pageApp').classList.add('show');
-  renderHome();
+  var isDesktop = window.innerWidth >= 768;
+  document.getElementById('pageApp').classList.toggle('desktop', isDesktop);
+  document.getElementById('dUserName').textContent = user;
   updateStats();
-  document.getElementById('headerTitle').textContent='题库管理';
+  if(isDesktop){dSwitchPage('home');}
+  else{renderHome();document.getElementById('headerTitle').textContent='题库管理';}
 }
 
 function doLogout(){
@@ -462,7 +582,7 @@ function doLogout(){
   document.getElementById('loginBtn').textContent='登 录';
 }
 
-// ====== Navigation ======
+// ====== Mobile Navigation ======
 var pageStack = ['home'];
 
 function showPage(id){
@@ -493,14 +613,21 @@ function switchTab(tab){
   });
 }
 
-// ====== Home ======
+// ====== Desktop Navigation ======
+function dSwitchPage(page){
+  currentSubject = (page==='culture'||page==='xh'||page==='ll') ? page : '';
+  document.querySelectorAll('.s-nav').forEach(function(n){
+    n.classList.toggle('active',n.getAttribute('data-dpage')===page);
+  });
+  if(page==='home'){dRenderHome();return;}
+  if(page==='culture'||page==='xh'||page==='ll'){dRenderSubject(page);}
+}
+
+// ====== Home (Mobile) ======
 function renderHome(){
   var h=document.getElementById('subjectCards');
   h.innerHTML=tabSubjects.map(function(s){
     var d=subjectData[s]||[],n=d.length;
-    var icons={culture:'🏯',xh:'🗣️',ll:'📚'};
-    var names={culture:'中国文化',xh:'现代汉语',ll:'对外汉语教学理论'};
-    var colors={culture:'#E65100',xh:'#4A90D9',ll:'#2E7D32'};
     var pct=Math.min(100,Math.round(n/50*100));
     return '<div class="home-card" onclick="switchTab(\''+s+'\')" style="border-left:4px solid '+colors[s]+'">'+
       '<div class="hc-icon" style="background:'+colors[s]+'22">'+icons[s]+'</div>'+
@@ -509,19 +636,34 @@ function renderHome(){
   }).join('');
 }
 
-function updateStats(){
-  var c=subjectData.culture?subjectData.culture.length:0;
-  var x=subjectData.xh?subjectData.xh.length:0;
-  var l=subjectData.ll?subjectData.ll.length:0;
-  var t=c+x+l;
-  document.getElementById('hTotal').textContent=t;
-  var els=document.querySelectorAll('#subjectCards .home-card .hc-count');
-  if(els[0])els[0].textContent=c+' 题';
-  if(els[1])els[1].textContent=x+' 题';
-  if(els[2])els[2].textContent=l+' 题';
+// ====== Home (Desktop) ======
+function dRenderHome(){
+  var h=document.getElementById('dHeaderTitle');
+  h.textContent='📚 题库管理';
+  document.getElementById('dHeaderSub').textContent='';
+  var c=subjectData.culture.length,x=subjectData.xh.length,l=subjectData.ll.length,t=c+x+l;
+  var html='<div class="d-stats">'+
+    '<div class="d-stat blue"><div class="ds-icon">📖</div><div class="ds-num">'+t+'</div><div class="ds-label">总题量</div></div>'+
+    '<div class="d-stat green"><div class="ds-icon">📂</div><div class="ds-num">3</div><div class="ds-label">科目</div></div>'+
+    '<div class="d-stat orange"><div class="ds-icon">📜</div><div class="ds-num">0</div><div class="ds-label">真题套卷</div></div></div>'+
+    '<div class="f12 cg fw6 mb8">专项题库</div>'+
+    '<div class="d-subj-grid">'+
+    tabSubjects.map(function(s){
+      var d=subjectData[s]||[],n=d.length;
+      var pct=Math.min(100,Math.round(n/50*100));
+      return '<div class="home-card" onclick="dSwitchPage(\''+s+'\')" style="border-left:4px solid '+colors[s]+'">'+
+        '<div class="hc-icon" style="background:'+colors[s]+'22">'+icons[s]+'</div>'+
+        '<div class="hc-body"><div class="hc-name">'+names[s]+'</div><div class="hc-count">'+n+' 题</div>'+
+        '<div class="hc-bar"><div class="fl" style="width:'+pct+'%;background:'+colors[s]+'"></div></div></div></div>';
+    }).join('')+'</div>'+
+    '<div class="f12 cg fw6 mb8" style="margin-top:16px">综合考试</div>'+
+    '<div class="home-c2" style="max-width:500px">'+
+    '<div class="home-card" onclick="toast(\'模块开发中\')" style="flex-direction:column;text-align:center;padding:18px 14px"><div class="hc-icon" style="background:#F3E5F5;margin-bottom:8px">📜</div><div class="hc-name">历年真题</div><div class="hc-count" style="margin-top:4px;font-size:11px;color:var(--text3)">ICA真题试卷</div></div>'+
+    '<div class="home-card" onclick="toast(\'模块开发中\')" style="flex-direction:column;text-align:center;padding:18px 14px"><div class="hc-icon" style="background:#FFF3E0;margin-bottom:8px">🎯</div><div class="hc-name">模拟考场</div><div class="hc-count" style="margin-top:4px;font-size:11px;color:var(--text3)">全真限时考试</div></div></div>';
+  document.getElementById('dBody').innerHTML=html;
 }
 
-// ====== Subject List ======
+// ====== Subject List (Mobile) ======
 function renderSubject(s){
   currentSubject=s;
   var data=subjectData[s]||[];
@@ -533,16 +675,11 @@ function renderSubject(s){
     if(kv&&!q.text.toLowerCase().includes(kv))return false;
     return true;
   });
-  var names={culture:'中国文化',xh:'现代汉语',ll:'对外汉语教学理论'};
-  var icons={culture:'🏯',xh:'🗣️',ll:'📚'};
   var tbody=filteredQs.map(function(q,i){
-    var tl=typeLabels[q.type]||'选择';
-    var tc=typeClass[q.type]||'choice';
-    var dl={easy:'容易',mid:'中等',hard:'困难'};
     var textPreview=q.text.length>50?q.text.substring(0,50)+'…':q.text;
     return '<div class="q-card" onclick="openQDetail(\''+s+'\','+i+')">'+
-      '<div class="qc-top"><span class="qc-tag '+tc+'">'+tl+'</span>'+
-      '<span class="qc-diff">'+dl[q.diff]+(q.year?' · '+q.year:'')+'</span></div>'+
+      '<div class="qc-top"><span class="qc-tag '+typeClass[q.type]+'">'+typeLabels[q.type]+'</span>'+
+      '<span class="qc-diff">'+diffLabels[q.diff]+(q.year?' · '+q.year:'')+'</span></div>'+
       '<div class="qc-text">'+escHtml(textPreview)+'</div>'+
       '<div class="qc-meta">#'+(i+1)+' · 点击查看答案解析</div></div>';
   }).join('');
@@ -555,74 +692,147 @@ function renderSubject(s){
     '<button class="btn" style="background:var(--blue);color:#FFF" onclick="document.getElementById(\'sfKw\').value=\'\';renderSubject(\''+s+'\')">重置</button></div></div></div>'+
     '<div style="font-size:12px;color:var(--text3);margin-bottom:10px">共 '+data.length+' 题 · 筛选 '+filteredQs.length+' 题</div>'+
     '<div class="q-list">'+(filteredQs.length===0?'<div class="q-empty">📭 没有符合条件的题目</div>':tbody)+'</div>';
-  var el=document.getElementById('page-subject');
-  el.innerHTML=content;
+  document.getElementById('page-subject').innerHTML=content;
   document.getElementById('headerTitle').textContent=icons[s]+' '+names[s];
 }
 
-// ====== Question Detail ======
-function openQDetail(s,idx){
+// ====== Subject List (Desktop table) ======
+function dRenderSubject(s){
   currentSubject=s;
-  currentQIndex=idx;
-  showQDetail();
+  var d=subjectData[s]||[];
+  var typeF=document.getElementById('dsfType'),diffF=document.getElementById('dsfDiff'),kwF=document.getElementById('dsfKw');
+  var tv=typeF?typeF.value:'',dv=diffF?diffF.value:'',kv=kwF?kwF.value.trim().toLowerCase():'';
+  var qs=d.filter(function(q){
+    if(tv&&q.type!==tv)return false;
+    if(dv&&q.diff!==dv)return false;
+    if(kv&&!q.text.toLowerCase().includes(kv))return false;
+    return true;
+  });
+  filteredQs=qs;
+  document.getElementById('dHeaderTitle').textContent=icons[s]+' '+names[s];
+  document.getElementById('dHeaderSub').textContent='共 '+d.length+' 题 · 筛选 '+qs.length+' 题';
+  document.querySelectorAll('.s-nav').forEach(function(n){n.classList.toggle('active',n.getAttribute('data-dpage')===s);});
+  var body=document.getElementById('dBody');
+  body.innerHTML='<div class="filter-bar">'+
+    '<div class="filter-body" style="display:flex!important;gap:8px;align-items:center;padding:0;flex-wrap:wrap">'+
+    '<div class="filter-row" style="margin:0;display:flex;gap:6px">'+
+    '<select id="dsfType" onchange="dRenderSubject(\''+s+'\')" style="padding:6px 10px;border:1.5px solid #E0E4EA;border-radius:8px;font-size:12px;outline:none;min-height:32px"><option value="">全部题型</option><option value="choice">选择题</option><option value="fill">填空题</option><option value="judge">判断题</option><option value="short">简答题</option></select>'+
+    '<select id="dsfDiff" onchange="dRenderSubject(\''+s+'\')" style="padding:6px 10px;border:1.5px solid #E0E4EA;border-radius:8px;font-size:12px;outline:none;min-height:32px"><option value="">全部难度</option><option value="easy">容易</option><option value="mid">中等</option><option value="hard">困难</option></select>'+
+    '<input type="text" id="dsfKw" placeholder="搜索..." oninput="dRenderSubject(\''+s+'\')" style="padding:6px 10px;border:1.5px solid #E0E4EA;border-radius:8px;font-size:12px;outline:none;min-height:32px;width:160px">'+
+    '<button onclick="document.getElementById(\'dsfKw\').value=\'\';dRenderSubject(\''+s+'\')" style="padding:6px 14px;border:none;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;background:var(--blue);color:#FFF;min-height:32px">重置</button></div></div></div>'+
+    '<div class="d-table-wrap"><table><thead><tr>'+
+    '<th style="width:40px">#</th><th style="width:60px">题型</th><th style="width:50px">难度</th><th>题目</th><th style="width:70px">答案</th><th style="width:100px">操作</th></tr></thead><tbody>'+
+    (qs.length===0?'<tr><td colspan="6" class="d-empty">📭 没有符合条件的题目</td></tr>':
+    qs.map(function(q,i){return '<tr><td style="color:var(--text3);font-size:12px">'+(i+1)+'</td>'+
+      '<td><span class="tag tag-'+typeClass[q.type]+'">'+typeLabels[q.type]+'</span></td>'+
+      '<td><span class="tag tag-'+q.diff+'">'+diffLabels[q.diff]+'</span></td>'+
+      '<td><span class="q-text" title="'+escHtml(q.text)+'">'+escHtml(q.text.length>50?q.text.substring(0,50)+'…':q.text)+'</span></td>'+
+      '<td><span title="'+escHtml(q.answer)+'">'+escHtml(q.answer.length>6?q.answer.substring(0,6)+'…':q.answer)+'</span></td>'+
+      '<td><div style="display:flex;gap:4px">'+
+      '<button style="background:none;border:none;cursor:pointer;font-size:14px;padding:2px 4px;border-radius:4px" onclick="dPreviewQ('+i+')" title="预览">👁️</button>'+
+      '<button style="background:none;border:none;cursor:pointer;font-size:14px;padding:2px 4px;border-radius:4px" onclick="dOpenQDetail('+i+')" title="答题">📝</button>'+
+      '</div></td></tr>';}).join(''))+
+    '</tbody></table></div>';
 }
 
+function dPreviewQ(idx){
+  var q=filteredQs[idx];if(!q)return;
+  var html='<div class="pq-type">'+typeNames[q.type]+(q.year?' · '+q.year:'')+'</div>'+
+    '<div class="pq-text">'+escHtml(q.text)+'</div>'+
+    (q.type==='choice'&&q.options&&q.options.length>0?'<div class="pq-options">'+q.options.map(function(o){return '<div>'+escHtml(o)+'</div>';}).join('')+'</div>':'')+
+    '<div class="pq-answer"><div class="l">✅ 答案</div><div class="v">'+escHtml(q.answer)+'</div></div>'+
+    (q.explain?'<div class="pq-explain"><div class="l">📖 解析</div><div class="v">'+escHtml(q.explain)+'</div></div>':'');
+  document.getElementById('previewContent').innerHTML=html;
+  openModal('modalPreview');
+}
+
+// ====== Question Detail (mobile) ======
+function openQDetail(s,idx){currentSubject=s;currentQIndex=idx;showQDetail();}
 function showQDetail(){
-  var q=filteredQs[currentQIndex];
-  if(!q){showPage(currentSubject);return;}
-  var tl={choice:'选择题',fill:'填空题',judge:'判断题',short:'简答题'};
-  var dl={easy:'容易',mid:'中等',hard:'困难'};
+  var q=filteredQs[currentQIndex];if(!q){showPage(currentSubject);return;}
   var html='<div class="qd-wrap">'+
-    '<div class="qd-counter">'+(currentQIndex+1)+' / '+filteredQs.length+' · '+dl[q.diff]+(q.year?' · '+q.year:'')+'</div>'+
-    '<div class="qd-card"><div class="qd-type">'+tl[q.type]+'</div>'+
+    '<div class="qd-counter">'+(currentQIndex+1)+' / '+filteredQs.length+' · '+diffLabels[q.diff]+(q.year?' · '+q.year:'')+'</div>'+
+    '<div class="qd-card"><div class="qd-type">'+typeNames[q.type]+'</div>'+
     '<div class="qd-text">'+escHtml(q.text)+'</div>';
   if(q.type==='choice'&&q.options&&q.options.length>0){
     html+='<div class="qd-options">';
-    q.options.forEach(function(o){
-      var correct=q.answer&&q.answer.includes(o.charAt(0));
-      html+='<div class="qd-option'+(correct?' correct':'')+'">'+escHtml(o)+'</div>';
-    });
+    q.options.forEach(function(o){var c=q.answer&&q.answer.includes(o.charAt(0));html+='<div class="qd-option'+(c?' correct':'')+'">'+escHtml(o)+'</div>';});
     html+='</div>';
   }
-  html+='<div class="qd-answer"><div class="l">✅ 正确答案</div><div class="v">'+escHtml(q.answer)+'</div></div>';
-  if(q.explain){
-    html+='<div class="qd-explain"><div class="l">📖 解析</div><div class="v">'+escHtml(q.explain)+'</div></div>';
-  }
-  html+='<div class="qd-nav">'+
-    '<button class="btn btn-prev" onclick="navQ(-1)"'+(currentQIndex<=0?' disabled':'')+'>‹ 上一题</button>'+
+  html+='<div class="qd-answer"><div class="l">✅ 正确答案</div><div class="v">'+escHtml(q.answer)+'</div></div>'+
+    (q.explain?'<div class="qd-explain"><div class="l">📖 解析</div><div class="v">'+escHtml(q.explain)+'</div></div>':'')+
+    '<div class="qd-nav"><button class="btn btn-prev" onclick="navQ(-1)"'+(currentQIndex<=0?' disabled':'')+'>‹ 上一题</button>'+
     '<button class="btn btn-next" onclick="navQ(1)"'+(currentQIndex>=filteredQs.length-1?' disabled':'')+'>下一题 ›</button></div></div>';
   document.getElementById('page-qdetail').innerHTML=html;
-  if(pageStack[pageStack.length-1]!=='qdetail')pageStack.push('qdetail');
-  showPage('qdetail');
+  pageStack.push('qdetail');showPage('qdetail');
   document.getElementById('headerTitle').textContent='题目详情';
 }
-
 function navQ(dir){
-  var ni=currentQIndex+dir;
-  if(ni<0||ni>=filteredQs.length)return;
-  currentQIndex=ni;
-  showQDetail();
+  var ni=currentQIndex+dir;if(ni<0||ni>=filteredQs.length)return;
+  currentQIndex=ni;showQDetail();
   document.getElementById('page-qdetail').scrollTop=0;
 }
 
-// ====== Modal CRUD ======
+// ====== Question Detail (desktop) ======
+function dOpenQDetail(idx){
+  currentQIndex=idx;
+  var q=filteredQs[idx];if(!q)return;
+  document.getElementById('dHeaderTitle').textContent='📝 答题模式';
+  document.getElementById('dHeaderSub').textContent=''+(currentQIndex+1)+' / '+filteredQs.length;
+  var html='<div class="qd-wrap" style="max-width:700px;margin:0 auto">'+
+    '<div class="qd-card"><div class="qd-type">'+typeNames[q.type]+(q.year?' · '+q.year:'')+'</div>'+
+    '<div class="qd-text">'+escHtml(q.text)+'</div>';
+  if(q.type==='choice'&&q.options&&q.options.length>0){
+    html+='<div class="qd-options">';
+    q.options.forEach(function(o){var c=q.answer&&q.answer.includes(o.charAt(0));html+='<div class="qd-option'+(c?' correct':'')+'">'+escHtml(o)+'</div>';});
+    html+='</div>';
+  }
+  html+='<div class="qd-answer"><div class="l">✅ 正确答案</div><div class="v">'+escHtml(q.answer)+'</div></div>'+
+    (q.explain?'<div class="qd-explain"><div class="l">📖 解析</div><div class="v">'+escHtml(q.explain)+'</div></div>':'')+
+    '<div class="qd-nav"><button class="btn btn-prev" onclick="dNavQ(-1)"'+(currentQIndex<=0?' disabled':'')+'>‹ 上一题</button>'+
+    '<button class="btn btn-next" onclick="dNavQ(1)"'+(currentQIndex>=filteredQs.length-1?' disabled':'')+'>下一题 ›</button></div></div>'+
+    '<div style="text-align:center;margin-top:8px"><button onclick="dSwitchPage(currentSubject)" style="background:none;border:none;color:var(--blue);font-size:14px;cursor:pointer">← 返回列表</button></div>';
+  document.getElementById('dBody').innerHTML=html;
+}
+function dNavQ(dir){
+  var ni=currentQIndex+dir;if(ni<0||ni>=filteredQs.length)return;
+  currentQIndex=ni;dOpenQDetail(ni);
+  document.getElementById('dBody').scrollTop=0;
+}
+
+// ====== Stats ======
+function updateStats(){
+  var c=subjectData.culture?subjectData.culture.length:0;
+  var x=subjectData.xh?subjectData.xh.length:0;
+  var l=subjectData.ll?subjectData.ll.length:0;
+  var t=c+x+l;
+  document.getElementById('hTotal').textContent=t;
+  document.getElementById('dBC').textContent=c;
+  document.getElementById('dBX').textContent=x;
+  document.getElementById('dBL').textContent=l;
+  var els=document.querySelectorAll('#subjectCards .home-card .hc-count');
+  if(els[0])els[0].textContent=c+' 题';
+  if(els[1])els[1].textContent=x+' 题';
+  if(els[2])els[2].textContent=l+' 题';
+}
+
+// ====== Modal ======
 function openModal(id){document.getElementById(id).classList.add('show');}
 function closeModal(id){document.getElementById(id).classList.remove('show');}
 function escHtml(s){var d=document.createElement('div');d.appendChild(document.createTextNode(s));return d.innerHTML;}
+function toast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('show');},2000);}
 
-// ====== Toast ======
-function toast(msg){
-  var t=document.getElementById('toast');
-  t.textContent=msg;t.classList.add('show');
-  clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('show');},2000);
-}
+// ====== Window resize ======
+window.addEventListener('resize',function(){
+  var a=document.getElementById('pageApp');
+  if(!a.classList.contains('show'))return;
+  var d=window.innerWidth>=768;
+  a.classList.toggle('desktop',d);
+  if(d&&currentUser){dSwitchPage(currentSubject||'home');}
+});
 
 // ====== Startup ======
-(function(){
-  var u=sessionStorage.getItem('ica_user');
-  if(u&&ACCOUNTS.hasOwnProperty(u))enterApp(u);
-  else document.getElementById('loginId').focus();
-})();
+(function(){var u=sessionStorage.getItem('ica_user');if(u&&ACCOUNTS.hasOwnProperty(u))enterApp(u);else document.getElementById('loginId').focus();})();
 </script>
 </body>
 </html>
