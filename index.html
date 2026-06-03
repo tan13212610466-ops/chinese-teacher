@@ -998,21 +998,13 @@ function getExamPapers(){
     });
   });
   var papers=[];
-  ['2024','2025','2026'].forEach(function(y){
-    if(years[y]){
-      var qs=[];
-      tabSubjects.forEach(function(s){if(years[y][s])qs=qs.concat(years[y][s]);});
-      if(qs.length>0)papers.push({id:'p_'+y,name:y+'年ICA真题',year:y,questions:qs,count:qs.length});
-    }
+  // Sort years descending
+  var sortedYears=Object.keys(years).filter(function(y){return y!=='其他'&&y!=='';}).sort().reverse();
+  sortedYears.forEach(function(y){
+    var qs=[];
+    tabSubjects.forEach(function(s){if(years[y][s])qs=qs.concat(years[y][s]);});
+    if(qs.length>0)papers.push({id:'p_'+y,name:y+'年ICA真题',year:y,questions:qs,count:qs.length});
   });
-  // Also add any remaining year
-  for(var y in years){
-    if(['2024','2025','2026'].indexOf(y)<0){
-      var qs=[];
-      tabSubjects.forEach(function(s){if(years[y][s])qs=qs.concat(years[y][s]);});
-      if(qs.length>0)papers.push({id:'p_'+y,name:y+'年ICA真题',year:y,questions:qs,count:qs.length});
-    }
-  }
   return papers;
 }
 
