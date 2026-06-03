@@ -309,7 +309,12 @@ input,select,textarea,button{font-family:inherit;font-size:inherit}
       </div>
       <div class="section-label">选择科目开始刷题</div>
       <div class="home-cards" id="subjectCards"></div>
-      <div class="section-label">综合</div>
+      <div class="section-label">综合考试</div>
+      <div class="home-c2">
+        <div class="home-card" onclick="toast('模块开发中')"><div class="hc-icon" style="background:#F3E5F5">📜</div><div class="hc-body"><div class="hc-name">历年真题</div><div class="hc-count">ICA历年真题试卷</div></div></div>
+        <div class="home-card" onclick="toast('模块开发中')"><div class="hc-icon" style="background:#FFF3E0">🎯</div><div class="hc-body"><div class="hc-name">模拟考场</div><div class="hc-count">全真限时考试</div></div></div>
+      </div>
+      <div class="section-label">其他</div>
       <div class="home-cards">
         <div class="home-card" onclick="switchTab('wrong')"><div class="hc-icon" style="background:var(--red-light)">❌</div><div class="hc-body"><div class="hc-name">错题本</div><div class="hc-count" id="hWrongLabel">0 道错题待复习</div></div></div>
         <div class="home-card" onclick="startRandomPractice()"><div class="hc-icon" style="background:#F3E5F5">🎲</div><div class="hc-body"><div class="hc-name">随机练习</div><div class="hc-count">三科混合出题</div></div></div>
@@ -837,7 +842,11 @@ function dRenderHome(){
         '<div class="hc-body"><div class="hc-name">'+names[s]+'</div><div class="hc-count">'+n+' 题</div>'+
         '<div class="hc-bar"><div class="fl" style="width:'+pct+'%;background:'+colors[s]+'"></div></div></div></div>';
     }).join('')+'</div>'+
-    '<div style="display:flex;gap:12px;margin-top:16px">'+
+    '<div class="f12 cg fw6 mb8" style="font-size:12px;color:var(--text3);font-weight:600;margin-bottom:10px;margin-top:8px">综合考试</div>'+
+    '<div style="display:flex;gap:12px;margin-bottom:16px">'+
+    '<div class="home-card" onclick="toast(\'模块开发中\')" style="flex:1;border-left:4px solid #7B1FA2"><div class="hc-icon" style="background:#F3E5F5">📜</div><div class="hc-body"><div class="hc-name">历年真题</div><div class="hc-count">ICA真题试卷</div></div></div>'+
+    '<div class="home-card" onclick="toast(\'模块开发中\')" style="flex:1;border-left:4px solid #EF6C00"><div class="hc-icon" style="background:#FFF3E0">🎯</div><div class="hc-body"><div class="hc-name">模拟考场</div><div class="hc-count">全真限时考试</div></div></div></div>'+
+    '<div style="display:flex;gap:12px">'+
     '<div class="home-card" onclick="dStartWrong()" style="flex:1;border-left:4px solid var(--red)"><div class="hc-icon" style="background:var(--red-light)">❌</div><div class="hc-body"><div class="hc-name">错题本</div><div class="hc-count">'+wt+' 道错题待复习</div></div></div>'+
     '<div class="home-card" onclick="dStartRandom()" style="flex:1;border-left:4px solid #7B1FA2"><div class="hc-icon" style="background:#F3E5F5">🎲</div><div class="hc-body"><div class="hc-name">随机练习</div><div class="hc-count">三科混合出题</div></div></div></div>';
   document.getElementById('dBody').innerHTML=html;
