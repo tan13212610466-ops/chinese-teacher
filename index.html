@@ -1177,7 +1177,7 @@ function getExamDistribution(){
   typeRatio.choice=typeTotal>0?typeAgg.choice/typeTotal:0.7;
   typeRatio.fill=typeTotal>0?typeAgg.fill/typeTotal:0.15;
   typeRatio.judge=typeTotal>0?typeAgg.judge/typeTotal:0.15;
-  return {total:30,subjectRatio:subjectRatio,typeRatio:typeRatio};
+  return {total:75,subjectRatio:subjectRatio,typeRatio:typeRatio};
 }
 
 function startMock(){
@@ -1211,7 +1211,7 @@ function startMock(){
   shuffle(picked);
   examQs=picked;examQIndex=0;examMode='mock';
   examStats={total:picked.length,correct:0,wrong:0};
-  examTimeLeft=30*60;
+  examTimeLeft=90*60;
   if(examTimer)clearInterval(examTimer);
   examTimer=setInterval(function(){
     examTimeLeft--;
@@ -1240,7 +1240,7 @@ showExamQ=function(){
   pageStack.push('exam');showPage('exam');
   document.getElementById('headerTitle').textContent=examMode==='mock'?'🎯 模拟考场':'📜 '+(examQIndex+1)+'/'+examStats.total;
   var answered=q._examAnswered;
-  var tm=examMode==='mock'?'<span class="eh-timer" id="examTimer">⏱ 30:00</span>':'';
+  var tm=examMode==='mock'?'<span class="eh-timer" id="examTimer">⏱ 90:00</span>':'';
   var html='<div class="exam-header">'+tm+'<span class="eh-progress">'+(examQIndex+1)+'/'+examStats.total+(examMode==='mock'?'':' · '+names[s])+'</span><span class="eh-score">✅'+examStats.correct+' ❌'+examStats.wrong+'</span></div>'+
     '<div class="exam-card"><div class="exam-meta">'+(examMode==='mock'?names[s]+' · ':'')+typeNames[q.type]+(q.year?' · '+q.year:'')+'</div>'+
     '<div class="exam-text">'+escHtml(q.text)+'</div>';
