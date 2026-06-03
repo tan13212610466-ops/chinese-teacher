@@ -661,7 +661,6 @@ function getPriority(sp,id){
   return 2; // mastered
 }
 function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}}
-
 function startPractice(s){startPracticeCustom(subjectData[s]||[],s);}
 function startPracticeFromList(s,idx){startPracticeCustom(subjectData[s]||[],s);}
 function startRandomPractice(){
@@ -669,14 +668,14 @@ function startRandomPractice(){
   tabSubjects.forEach(function(s){(subjectData[s]||[]).forEach(function(q){all.push({q:q,subject:s});});});
   shuffle(all);
   practiceQs=all;currentQIndex=0;
-  practiceStats={total:all.length,correct:0,wrong:0,subject:s};
+  practiceStats={total:all.length,correct:0,wrong:0};
   showPractice();
 }
 function startPracticeCustom(data,subject){
   var qs=data.map(function(q){return{q:q,subject:subject};});
-  qs=sortPracticeQs(qs,subject);
+  shuffle(qs);
   practiceQs=qs;currentQIndex=0;currentSubject=subject;
-  practiceStats={total:qs.length,correct:0,wrong:0,subject:subject};
+  practiceStats={total:qs.length,correct:0,wrong:0};
   showPractice();
 }
 
