@@ -353,6 +353,69 @@ html,body{
 
 </div>
 
+<!-- ====== 登录脚本（小体积，优先加载）====== -->
+<script>
+var ACCOUNTS = {
+  admin: 'admin123',
+  teacher: 'teacher123',
+  dev: 'dev123'
+};
+var currentUser = '';
+function _k(key) { return currentUser + '_' + key; }
+function setCookie(name, val, days) {
+  var d = new Date();
+  d.setTime(d.getTime() + (days||30)*24*60*60*1000);
+  document.cookie = name+'='+encodeURIComponent(val)+';expires='+d.toUTCString()+';path=/';
+}
+function getCookie(name) {
+  var m = document.cookie.match(new RegExp('(^| )'+name+'=([^;]+)'));
+  return m ? decodeURIComponent(m[2]) : '';
+}
+function delCookie(name) {
+  document.cookie = name+'=;expires=Thu,01 Jan 1970 00:00:00 GMT;path=/';
+}
+function doLogin() {
+  var uid = document.getElementById('login-id').value.trim();
+  var pwd = document.getElementById('login-pw').value.trim();
+  var err = document.getElementById('pw-err');
+  if (uid && ACCOUNTS[uid] === pwd) {
+    currentUser = uid;
+    if (document.getElementById('login-remember').checked) {
+      setCookie('tcfl_user', uid, 30);
+    } else {
+      sessionStorage.setItem('tcfl_user', uid);
+      delCookie('tcfl_user');
+    }
+    err.style.display = 'none';
+    document.getElementById('pw-overlay').classList.add('hide');
+    document.getElementById('login-user-display').textContent = uid;
+    if (typeof renderHome === 'function') renderHome();
+    if (typeof updateBadge === 'function') updateBadge();
+  } else {
+    err.style.display = 'block';
+    document.getElementById('login-pw').value = '';
+    document.getElementById('login-pw').focus();
+  }
+}
+function doLogout() {
+  currentUser = '';
+  delCookie('tcfl_user');
+  sessionStorage.removeItem('tcfl_user');
+  document.getElementById('pw-overlay').classList.remove('hide');
+  document.getElementById('login-id').value = '';
+  document.getElementById('login-pw').value = '';
+  document.getElementById('pw-err').style.display = 'none';
+  document.getElementById('login-id').focus();
+}
+// 初始化
+currentUser = getCookie('tcfl_user') || sessionStorage.getItem('tcfl_user') || '';
+if (currentUser) {
+  document.getElementById('pw-overlay').classList.add('hide');
+  var ud = document.getElementById('login-user-display');
+  if (ud) ud.textContent = currentUser;
+}
+</script>
+
 <script>
 // ======== 题库 ========
 const BANK = {
@@ -656,21 +719,25 @@ function renderHome() {
   if (tq) tq.textContent = totalQs + ' 题';
 }
 
-// ======== 章节列表（含历年真题方向选择）=======
-S.examDir = ''; // 'ica' | 'ctcsol' | ''
+// ======== 章节列表 ========
 function showChapters(si) {
   S.curSubj = si;
+  document.getElementById('ch-subj-name').textContent = BANK.subjects[si].name + (si === 3 ? '' : ' · 章节');
+  const area = document.getElementById('ch-list');
+  const s = BANK.subjects[si];
+  // 历年真题：显示ICA真题试卷
   if (si === 3) {
-    document.getElementById('ch-subj-name').textContent = '历年真题 · 选择方向';
-    document.querySelector('#page-chapters .hd .hdb').onclick = function(){ showPage('home'); };
-    renderExamDirections();
+    let html = '<div class="f13 cg mt12 mb8 fw6">ICA 考试真题试卷（按年份）：</div>';
+    s.chapters.forEach((ch, ci) => {
+      html += '<div class="sc" onclick="startChapter(3,' + ci + ')">';
+      html += '<div class="sc-top"><div class="sc-ico" style="background:#E3F2FD;font-size:18px">🗓️</div><div class="sc-n" style="color:#1565C0">' + ch.name + '</div></div>';
+      html += '<div class="sc-d">' + ch.questions.length + ' 道题 · 多种题型</div>';
+      html += '</div>';
+    });
+    area.innerHTML = html;
     showPage('chapters');
     return;
   }
-  document.getElementById('ch-subj-name').textContent = BANK.subjects[si].name + ' · 章节';
-  document.querySelector('#page-chapters .hd .hdb').onclick = function(){ showPage('home'); };
-  const area = document.getElementById('ch-list');
-  const s = BANK.subjects[si];
   let html = '';
   s.chapters.forEach((ch, ci) => {
     const saved = JSON.parse(localStorage.getItem(_k('t_' + si + '_' + ci)) || '{}');
@@ -689,109 +756,6 @@ function showChapters(si) {
   });
   area.innerHTML = html;
   showPage('chapters');
-}
-
-// ======== 历年真题方向选择 ========
-function renderExamDirections() {
-  const area = document.getElementById('ch-list');
-  const s = BANK.subjects[3];
-  var icaTotal = 0;
-  s.chapters.forEach(function(ch){ icaTotal += ch.questions.length; });
-  area.innerHTML =
-    '<div class="f13 cg mt12 mb8 fw6">请选择考试方向：</div>' +
-    '<div class="sc" onclick="showExamPapers(\'ica\')" style="margin-top:8px;border-color:#4A7EC2">' +
-    '<div class="sc-top"><div class="sc-ico" style="background:#E3F2FD;font-size:22px">🌐</div><div class="sc-n" style="color:#1565C0">ICA 国际汉语教师资格考试</div></div>' +
-    '<div class="sc-d">' + icaTotal + ' 道真题 · 多题型综合 · ' + Math.round(s.chapters.length/3) + '套完整试卷</div>' +
-    '<div class="f12 cg mt4" style="margin-left:56px">含填空、选择、改错、简答等多种题型</div>' +
-    '</div>' +
-    '<div class="sc" onclick="showExamPapers(\'ctcsol\')" style="border-color:#E65100;background:#FFF8E1">' +
-    '<div class="sc-top"><div class="sc-ico" style="background:#FFF3E0;font-size:22px">📜</div><div class="sc-n" style="color:#E65100">CTCSOL 国际中文教师证书考试</div></div>' +
-    '<div class="sc-d">全客观题 · 笔试真题</div>' +
-    '<div class="f12 cg mt4" style="margin-left:56px">真题整理中</div>' +
-    '</div>' +
-    '<div class="card-info mt12">' +
-    '<div class="fw6 mb8">💡 说明</div>' +
-    '<div class="f13" style="line-height:1.8">' +
-    '· ICA考试：综合能力评估，8种题型<br>' +
-    '· CTCSOL考试：全客观题（单选+多选），150分钟<br>' +
-    '· 点击进入后可选择具体年份/卷次' +
-    '</div></div>';
-}
-
-// ======== 历年真题 - 展示方向下试卷列表 ========
-function showExamPapers(dir) {
-  S.examDir = dir;
-  S.curSubj = 3;
-  const area = document.getElementById('ch-list');
-  const s = BANK.subjects[3];
-  document.querySelector('#page-chapters .hd .hdb').onclick = function(){ showChapters(3); };
-  if (dir === 'ica') {
-    document.getElementById('ch-subj-name').textContent = 'ICA 真题试卷';
-    var icaSets = [
-      {name:'ICA 真题卷一', chs:[0,3,6]},
-      {name:'ICA 真题卷二', chs:[1,4,7]},
-      {name:'ICA 真题卷三', chs:[2,5,8]},
-    ];
-    var html = '<div class="f13 cg mt8 mb8">ICA考试 · 3套完整真题试卷</div>';
-    icaSets.forEach(function(set, idx){
-      var total = 0;
-      set.chs.forEach(function(ci){ total += s.chapters[ci].questions.length; });
-      html += '<div class="sc" onclick="startExamSet(' + idx + ')">';
-      html += '<div class="sc-top"><div class="sc-ico" style="background:#E8F0FA;font-size:18px">📄</div><div class="sc-n" style="color:#1565C0">' + set.name + '</div></div>';
-      html += '<div class="sc-d">共 ' + total + ' 题 · 现代汉语+教学理论+中国文化</div>';
-      html += '</div>';
-    });
-    area.innerHTML = html;
-  } else {
-    document.getElementById('ch-subj-name').textContent = 'CTCSOL 真题试卷';
-    var ctcItems = [];
-    s.chapters.forEach(function(ch, ci){
-      var objQ = ch.questions.filter(function(q){ return q.type === 'choice' || q.type === 'multi'; });
-      if (objQ.length > 0) ctcItems.push({idx:ci, name:ch.name, count:objQ.length});
-    });
-    if (ctcItems.length > 0) {
-      var html = '<div class="f13 cg mt8 mb8">CTCSOL历年笔试真题（全客观题）</div>';
-      ctcItems.forEach(function(p){
-        html += '<div class="sc" onclick="startCTCExam(' + p.idx + ')">';
-        html += '<div class="sc-top"><div class="sc-ico" style="background:#FFF3E0;font-size:18px">📜</div><div class="sc-n" style="color:#E65100">' + p.name + '</div></div>';
-        html += '<div class="sc-d">' + p.count + ' 道客观题</div>';
-        html += '</div>';
-      });
-      area.innerHTML = html;
-    } else {
-      area.innerHTML = '<div class="eb-empty"><div class="eb-ico">📋</div><div>暂无CTCSOL真题试卷</div><div class="f12 cg mt4">CTCSOL真题正在整理中，敬请期待</div></div>';
-    }
-  }
-  showPage('chapters');
-}
-
-// ======== 开始ICA真题试卷练习 ========
-function startExamSet(setIdx) {
-  var s = BANK.subjects[3];
-  var icaSets = [[0,3,6],[1,4,7],[2,5,8]];
-  S.curSubj = 3; S.curCh = -1; S.questions = [];
-  icaSets[setIdx].forEach(function(ci){
-    s.chapters[ci].questions.forEach(function(q){ S.questions.push(JSON.parse(JSON.stringify(q))); });
-  });
-  shuffle(S.questions);
-  S.qIdx = 0; S.answers = {}; S.submitted = {}; S.scores = {}; S.results = [];
-  showPage('quiz');
-  document.getElementById('qz-title').textContent = 'ICA 真题卷（' + (setIdx+1) + '）';
-  renderQuiz();
-}
-
-// ======== 开始CTCSOL真题练习 ========
-function startCTCExam(ci) {
-  var s = BANK.subjects[3];
-  S.curSubj = 3; S.curCh = -1; S.questions = [];
-  s.chapters[ci].questions.forEach(function(q){
-    if (q.type === 'choice' || q.type === 'multi') S.questions.push(JSON.parse(JSON.stringify(q)));
-  });
-  shuffle(S.questions);
-  S.qIdx = 0; S.answers = {}; S.submitted = {}; S.scores = {}; S.results = [];
-  showPage('quiz');
-  document.getElementById('qz-title').textContent = s.chapters[ci].name + ' · 客观题';
-  renderQuiz();
 }
 
 // ======== 开始章节练习 ========
@@ -973,9 +937,7 @@ function resetChapter(si, ci) {
 // ======== 章节完成页 ========
 function showDone() {
   showPage('done');
-  const isExam = S.curCh === -1;
-  let ch = null;
-  if (!isExam) ch = BANK.subjects[S.curSubj].chapters[S.curCh];
+  const ch = BANK.subjects[S.curSubj].chapters[S.curCh];
   let correct = 0, wrong = 0;
   S.questions.forEach(q => { if (S.scores[q.id]) correct++; else if (S.submitted[q.id]) wrong++; });
   const skipped = S.questions.filter(q => !S.submitted[q.id]).length;
@@ -983,8 +945,8 @@ function showDone() {
 
   let html = '<div class="tac mt16">';
   html += '<div style="font-size:48px;margin-bottom:8px">' + (correct === total ? '🎉' : '💪') + '</div>';
-  html += '<div class="fw6" style="font-size:18px">' + (ch ? ch.name : (S.examDir === 'ica' ? 'ICA 真题' : 'CTCSOL 真题')) + '</div>';
-  html += '<div class="f13 cg mt4">' + (isExam ? '真题练习完成' : '练习完成') + '</div></div>';
+  html += '<div class="fw6" style="font-size:18px">' + ch.name + '</div>';
+  html += '<div class="f13 cg mt4">练习完成</div></div>';
 
   html += '<div class="card mt16 flex-sb">';
   html += '<div class="tac"><div style="font-size:24px;font-weight:700;color:#43A047">' + correct + '</div><div class="f12 cg">正确</div></div>';
@@ -998,7 +960,7 @@ function showDone() {
     S.questions.forEach(q => {
       if (S.submitted[q.id] && !S.scores[q.id]) {
         html += '<div class="f13" style="padding:6px 0;border-bottom:1px solid #F0F2F6">';
-        html += '<div>' + q.text.replace(/^\\d+[.、．\\s）\\)]*(\\d*[.、．\\s）\\)]*)*/, '').replace(/^[（(]\\d+[）)]\\s*/, '').replace(/^[\\s,，.、．:：]+/, '') + '</div>';
+        html += '<div>' + q.text.replace(/^\d+[.、．\s）\)]*(\d*[.、．\s）\)]*)*/, '').replace(/^[（(]\d+[）)]\s*/, '').replace(/^[\s,，.、．:：]+/, '') + '</div>';
         html += '<div class="cr">你的答案：' + (S.answers[q.id] || '') + ' · 正确答案：' + q.answer + '</div></div>';
       }
     });
@@ -1006,28 +968,28 @@ function showDone() {
   }
 
   html += '<div class="gap8 mt12 mb16">';
-  if (isExam) {
-    html += '<button class="btn btn-outline" onclick="showExamPapers(S.examDir)" style="flex:1">返回真题列表</button>';
-    html += '<button class="btn btn-outline" onclick="showPage(\'home\')" style="flex:1">返回首页</button>';
-  } else {
-    html += '<button class="btn btn-primary" onclick="retryWrong()" style="flex:1" ' + (wrong === 0 ? 'disabled' : '') + '>重做错题</button>';
-    html += '<button class="btn btn-outline" onclick="showChapters(S.curSubj)" style="flex:1">返回章节</button>';
-  }
+  html += '<button class="btn btn-primary" onclick="retryWrong()" style="flex:1" ' + (wrong === 0 ? 'disabled' : '') + '>重做错题</button>';
+  html += '<button class="btn btn-outline" onclick="showChapters(S.curSubj)" style="flex:1">返回章节</button>';
   html += '</div>';
-  if (!isExam && skipped === 0) {
+  // 如果全部答完，显示重置按钮
+  if (skipped === 0) {
     html += '<div class="tac mb16"><button class="btn btn-sm btn-outline" onclick="resetChapter(' + S.curSubj + ',' + S.curCh + ')" style="font-size:11px;color:#9AA6B8;border-color:#E0E4EA">🔄 重置本章进度（恢复原始顺序）</button></div>';
   }
   document.getElementById('done-area').innerHTML = html;
-  if (!isExam && skipped === 0) {
+  
+  // 如果全部答完，保存乱序索引
+  if (skipped === 0) {
     var si = S.curSubj, ci = S.curCh;
     var orderKey = _k('o_' + si + '_' + ci);
     var indices = [];
     for (var i = 0; i < S.questions.length; i++) indices.push(i);
+    // Fisher-Yates shuffle
     for (var i = indices.length - 1; i > 0; i--) {
       var j = Math.floor(Math.random() * (i + 1));
       var tmp = indices[i]; indices[i] = indices[j]; indices[j] = tmp;
     }
     localStorage.setItem(orderKey, JSON.stringify(indices));
+    // 标记已完成
     var key = _k('t_' + si + '_' + ci);
     var saved = JSON.parse(localStorage.getItem(key) || '{}');
     saved.completed = true;
@@ -1553,1169 +1515,464 @@ function confirmImport() {
 })();
 
 // ======== 多用户登录 ========
-var ACCOUNTS = {
-  admin: 'admin123',
-  teacher: 'teacher123',
-  dev: 'dev123'
-};
-var currentUser = ''; // set below on init
-var remembered = ''; // for remember-me flag
-function _k(key) { return currentUser + '_' + key; }
-function doLogin() {
-  var uid = document.getElementById('login-id').value.trim();
-  var pwd = document.getElementById('login-pw').value.trim();
-  var err = document.getElementById('pw-err');
-  if (uid && ACCOUNTS[uid] === pwd) {
-    currentUser = uid;
-    var rem = document.getElementById('login-remember').checked;
-    if (rem) {
-      localStorage.setItem('tcfl_user', uid);
-      localStorage.removeItem('tcfl_user_session');
-    } else {
-      sessionStorage.setItem('tcfl_user', uid);
-      localStorage.removeItem('tcfl_user');
-    }
-    err.style.display = 'none';
-    document.getElementById('pw-overlay').classList.add('hide');
-    document.getElementById('login-user-display').textContent = uid;
-    renderHome();
-    updateBadge();
-  } else {
-    err.style.display = 'block';
-    document.getElementById('login-pw').value = '';
-    document.getElementById('login-pw').focus();
-  }
-}
-function doLogout() {
-  currentUser = '';
-  localStorage.removeItem('tcfl_user');
-  sessionStorage.removeItem('tcfl_user');
-  document.getElementById('pw-overlay').classList.remove('hide');
-  document.getElementById('login-id').value = '';
-  document.getElementById('login-pw').value = '';
-  document.getElementById('pw-err').style.display = 'none';
-  document.getElementById('login-id').focus();
-}
-// 初始化：先查"记住我"(localStorage)，再查"本次会话"(sessionStorage)
-currentUser = localStorage.getItem('tcfl_user') || sessionStorage.getItem('tcfl_user') || '';
-if (currentUser) {
-  document.getElementById('pw-overlay').classList.add('hide');
-  document.getElementById('login-user-display').textContent = currentUser;
-}
-
-// ======== 第4板块：历年真题（9套模拟试卷） ========
+// ======== 第4板块：历年真题（ICA 完整版 179题）=======
 ;(function() {
-  // Remove old subject 4 if exists
-  if (BANK.subjects.length > 3) {
-    BANK.subjects.length = 3;
-  }
-
-  var examSubject = {
+  if (BANK.subjects.length > 3) BANK.subjects.length = 3;
+  BANK.subjects.push({
     id: 3,
     name: '历年真题',
-    source: '历年真题',
-    icon: '📜',
-    color: '#F3E5F5',
-    textColor: '#7B1FA2',
+    source: 'ICA真题',
+    icon: '🌐',
+    color: '#E3F2FD',
+    textColor: '#1565C0',
     chapters: [
-      {id:'xh_p1', name:'现代汉语 · 历年真题（一）', icon:'🗣️', summary:'现代汉语 · 历年真题（一） · 共39题', questions:[
-        {id:'zxh1_1', type:'fill', score:1, text:'1. "有人要来视察"这句话中包含________个不成词语素', answer:'2（视、察'},
-        {id:'zxh1_2', type:'fill', score:1, text:'2. 从词类角度来看，"大型"是________', answer:'区别词'},
-        {id:'zxh1_3', type:'fill', score:1, text:'3. "女法官"中的"女"，其词性是________', answer:'区别词'},
-        {id:'zxh1_4', type:'fill', score:1, text:'4. 现代汉语方言大致可以分为以下七大方言区，即北方方言、吴方言、闽方言、赣方言、客家方言、_________和粤方言', answer:'湘方言'},
-        {id:'zxh1_5', type:'fill', score:1, text:'5. 根据六书理论，"好"的造字法是________', answer:'会意'},
-        {id:'zxh1_6', type:'fill', score:1, text:'6. 具有字形归类作用，位于字典中各部的首字是__________', answer:'部首'},
-        {id:'zxh1_7', type:'fill', score:1, text:'7. 在普通话的音节结构中，一个音节最多能有_______个音素', answer:'4'},
-        {id:'zxh1_8', type:'fill', score:1, text:'8. 从翻译方式来看，"啤酒"属于_________外来词', answer:'音译加意译'},
-        {id:'zxh1_9', type:'fill', score:1, text:'9. "蝙蝠侠是个漫画英雄"这个结构中包含__________个语素', answer:'八'},
-        {id:'zxh1_10', type:'fill', score:1, text:'10. "云朵"的语音形式中包含了________个音素', answer:'5'},
-        {id:'zxh1_11', type:'fill', score:1, text:'11.（1）同tuéng', answer:'改为tóng，韵母ueng只拼零声母'},
-        {id:'zxh1_12', type:'fill', score:1, text:'11.（2）河hó', answer:'改为hé，韵母o只拼唇音声母'},
-        {id:'zxh1_13', type:'fill', score:1, text:'12.（1）梧桐útónɡ', answer:'wútónɡ'},
-        {id:'zxh1_14', type:'fill', score:1, text:'12.（2）皮袄pí ǎo', answer:'pí\'ǎo'},
-        {id:'zxh1_15', type:'fill', score:1, text:'12.（3）赢家ínɡjiā', answer:'yínɡjiā'},
-        {id:'zxh1_16', type:'fill', score:1, text:'12.（4）缘分üánfèn', answer:'yuánfèn'},
-        {id:'zxh1_17', type:'fill', score:1, text:'13.（1）巧夺天功', answer:'工'},
-        {id:'zxh1_18', type:'fill', score:1, text:'13.（2）杀君夺位', answer:'弑'},
-        {id:'zxh1_19', type:'fill', score:1, text:'13.（3）如雷灌耳', answer:'贯'},
-        {id:'zxh1_20', type:'fill', score:1, text:'13.（4）试目以待', answer:'拭'},
-        {id:'zxh1_21', type:'fill', score:1, text:'13.（5）民生凋蔽', answer:'敝'},
-        {id:'zxh1_22', type:'fill', score:1, text:'13.（6）巧夺天公', answer:'工'},
-        {id:'zxh1_23', type:'fill', score:1, text:'14.（1）天还没有亮，你又躺一下', answer:'又将改为再'},
-        {id:'zxh1_24', type:'fill', score:1, text:'14.（2）隔着雾，眼前的景物糊糊涂涂', answer:'糊糊涂涂改为模模糊糊'},
-        {id:'zxh1_25', type:'fill', score:1, text:'15.（1）构思好不好，关系到作品好不好', answer:'两面与一面不能搭配'},
-        {id:'zxh1_26', type:'fill', score:1, text:'15.（2）虽然他再聪明一百倍', answer:'虽然改为即使'},
-        {id:'zxh1_27', type:'choice', score:1, text:'16.（1）她把房间布置得整整齐齐的', answer:'B', options:['A.被动句','B.把字句','C.动词重叠','D.程度补语']},
-        {id:'zxh1_28', type:'choice', score:1, text:'16.（2）我今天困极了，一回家就想睡觉', answer:'D', options:['A.状态补语','B.结果补语','C.可能补语','D.程度补语']},
-        {id:'zxh1_29', type:'choice', score:1, text:'16.（3）最近我们公司有人辞职', answer:'D', options:['A.存现句','B.强调句','C.连动句','D.兼语句']},
-        {id:'zxh1_30', type:'choice', score:1, text:'16.（4）我打算先去看雪，然后去泡温泉', answer:'C', options:['A.目的复句','B.并列复句','C.承接复句','D.选择复句']},
-        {id:'zxh1_31', type:'choice', score:1, text:'16.（5）你仔细听一听，听出来了吗', answer:'C', options:['A.数量补语','B.形容词重叠','C.动词重叠','D.可能补语']},
-        {id:'zxh1_32', type:'choice', score:1, text:'16.（6）家家门口都挂着灯笼', answer:'A', options:['A.存现句','B.动词重叠','C.趋向补语','D.连动句']},
-        {id:'zxh1_33', type:'choice', score:1, text:'16.（7）你吃过中国的月饼吗', answer:'D', options:['A.选择问句','B.正反问句','C.特指问句','D.是非问句']},
-        {id:'zxh1_34', type:'choice', score:1, text:'16.（8）与其待在家里，还不如出去逛逛呢', answer:'A', options:['A.选择复句','B.递进复句','C.转折复句','D.因果复句']},
-        {id:'zxh1_35', type:'choice', score:1, text:'16.（9）他不是在酒吧，就是在去酒吧的路上', answer:'C', options:['A.并列复句','B.转折复句','C.选择复句','D.递进复句']},
-        {id:'zxh1_36', type:'choice', score:1, text:'16.（10）她的能力比其他员工更高', answer:'C', options:['A.程度补语','B.连动句','C.比较句','D.兼语句']},
-        {id:'zxh1_37', type:'fill', score:1, text:'17. 举例说明儿化及其作用', answer:'儿化指韵母带上卷舌色彩的音变'},
-        {id:'zxh1_38', type:'fill', score:1, text:'18. 举例说明普通话中的四呼', answer:'开口呼齐齿呼合口呼和撮口呼'},
-        {id:'zxh1_39', type:'fill', score:1, text:'19. 举例说明什么是熟语', answer:'熟语是定型化固定短语'},
+      {id:'ica_2021', name:'ICA 2021年真题', icon:'🗓️', summary:'ICA 2021年真题 · 46题', questions:[
+        {id:'i2021_1',type:'fill',score:1,text:'"四书"包括：《大学》、《中庸》、_________、《孟子》；"五经"包括：《诗》、《书》、_______、_______、《春秋》。',answer:'《论语》；《礼》；《易》'},
+        {id:'i2021_2',type:'fill',score:1,text:'只能与齐齿呼、撮口呼相拼的声母是_______________。',answer:'j、q、x'},
+        {id:'i2021_3',type:'fill',score:1,text:'在汉字标准化工作中，"四定"指的是________。',answer:'定量、定形、定音、定序'},
+        {id:'i2021_4',type:'fill',score:1,text:'能够直接修饰形容词和心理动词的是________。',answer:'程度副词'},
+        {id:'i2021_5',type:'fill',score:1,text:'儒家经典中的"三礼"是指________、________、________。',answer:'《周礼》《仪礼》《礼记》'},
+        {id:'i2021_6',type:'fill',score:1,text:'汉语应用中，经常用在补语位置上的介词有________。',answer:'在、到、给、向'},
+        {id:'i2021_7',type:'fill',score:1,text:'汉字"车"的第三笔是________。（写出笔画名称）',answer:'横'},
+        {id:'i2021_8',type:'fill',score:1,text:'由趋向动词"来"和"去"做补语的句子中，若宾语是表示处所的名词，则宾语的位置一定在趋向补语"来"或者"去"的________。',answer:'前面'},
+        {id:'i2021_9',type:'fill',score:1,text:'形容词前加副词以后再做定语修饰名词时与名词之间必须加________。',answer:'的'},
+        {id:'i2021_10',type:'fill',score:1,text:'两个音节联缀成义而不能拆开的词叫________。',answer:'联绵词'},
+        {id:'i2021_11',type:'fill',score:1,text:'"赵兵吃面条，吃完了。"一句中"完"的语义指向是________。',answer:'面条'},
+        {id:'i2021_12',type:'fill',score:1,text:'________按照一定的规则组成独体字，________按照一定的规则组成合体字。',answer:'笔画；部件'},
+        {id:'i2021_13',type:'fill',score:1,text:'"他喜欢哈尔滨啤酒。"中包含________个音节、________个语素、________个词。',answer:'7；7；5'},
+        {id:'i2021_14',type:'fill',score:1,text:'被誉为中国三大国粹的是________、________和________。',answer:'京剧；国画；中医'},
+        {id:'i2021_15',type:'fill',score:1,text:'"一"的变调有四种，请举例说明：单念____，去声前____，非去声前____，重叠中____。',answer:'阴平55；阳平35；去声51；轻声'},
+        {id:'i2021_16',type:'choice',score:1,text:'"儿童对第一语言的获取过程"能够使用哪个术语概括？',answer:'B',options:["A.学习","B.习得","C.获得","D.学得"]},
+        {id:'i2021_17',type:'choice',score:1,text:'下列属于连动句的是？',answer:'A',options:["A.你快去听听","B.屋里有粮食","C.汤姆真勇敢","D.他是日本人"]},
+        {id:'i2021_18',type:'choice',score:1,text:'属于第二语言教学"上层结构"的一项是？',answer:'A',options:["A.国家语言文字政策","B.第二语言教学理论","C.第二语言教学总体设计","D.第二语言教学原则"]},
+        {id:'i2021_19',type:'choice',score:1,text:'"你们坐在后面看得见黑板上的字吗？"中的补语属于？',answer:'B',options:["A.结果补语","B.可能补语","C.时量补语","D.水准补语"]},
+        {id:'i2021_20',type:'choice',score:1,text:'"不好"中的"不"应读？',answer:'C',options:["A.轻声","B.阴平","C.阳平","D.去声"]},
+        {id:'i2021_21',type:'choice',score:1,text:'"提升"属于复合式合成词中的哪种类型？',answer:'C',options:["A.联合型","B.偏正型","C.补充型","D.动宾型"]},
+        {id:'i2021_22',type:'choice',score:1,text:'"一对花瓶"、"你说的对"、"面对未来"中三个"对"代表？',answer:'B',options:["A.一个词","B.两个词","C.三个词","D.只代表音节"]},
+        {id:'i2021_23',type:'choice',score:1,text:'"谦虚"和"虚伪"的区别是？',answer:'B',options:["A.语义轻重不同","B.感情色彩不同","C.范围大小不同","D.语体色彩不同"]},
+        {id:'i2021_24',type:'choice',score:1,text:'汉语合成词不包括？',answer:'D',options:["A.附加式构词","B.复合式构词","C.简称式构词","D.叠音词"]},
+        {id:'i2021_25',type:'choice',score:1,text:'"反法西斯主义者"中的语素有？',answer:'D',options:["A.两个","B.三个","C.四个","D.五个"]},
+        {id:'i2021_26',type:'choice',score:1,text:'"边疆"和"边境"的区别是？',answer:'C',options:["A.集体与个体不同","B.性状特征不同","C.范围大小不同","D.语体色彩不同"]},
+        {id:'i2021_27',type:'choice',score:1,text:'"出门买菜"是？',answer:'D',options:["A.联合词组","B.偏正词组","C.动宾词组","D.连动词组"]},
+        {id:'i2021_28',type:'choice',score:1,text:'能听出说话人是谁，主要是因为各人的？',answer:'D',options:["A.音高不同","B.音强不同","C.音长不同","D.音色不同"]},
+        {id:'i2021_29',type:'choice',score:1,text:'"你的声音太小了，我没有听出来是你。"中"出来"表示？',answer:'B',options:["A.从里到外","B.辨别清楚","C.从无到有","D.超出范围"]},
+        {id:'i2021_30',type:'choice',score:1,text:'"安培"是？',answer:'B',options:["A.联绵词","B.译音词","C.并列式合成词","D.偏正式合成词"]},
+        {id:'i2021_31',type:'shortAnswer',score:5,text:'举例说明词义具有哪些性质？',answer:'词义具有概括性（如"人"概括所有人）、模糊性（如"晨"与"早"）、民族性（如"龙"的中西差异）。'},
+        {id:'i2021_32',type:'shortAnswer',score:5,text:'孔子提倡的"仁"的观点为何能在中华民族中产生长远影响？',answer:'"仁"的核心是"爱人"，强调人际关系和谐，符合中国传统伦理道德，成为儒家思想基石。'},
+        {id:'i2021_33',type:'shortAnswer',score:5,text:'在被动句中"被"与"让、叫"最明显的区别是什么？',answer:'"被"的施事可省略（他被打了），"让/叫"必须带宾语（他让人打了）。"被"可书面可口语，"让/叫"多用于口语。'},
+        {id:'i2021_34',type:'shortAnswer',score:5,text:'请举例说明"把"字句的基本特征。',answer:'①宾语定指（把书拿来）②动词不能光杆（把饭吃了）③表处置。结构：主语+把+宾语+动词+其他。'},
+        {id:'i2021_35',type:'shortAnswer',score:5,text:'ü与jqx相拼时省略两点，与nl相拼时不省略，为什么？',answer:'jqx不与u拼，省略ü点不混淆；nl既能与ü拼也能与u拼（女≠努），需保留两点区别。'},
+        {id:'i2021_36',type:'shortAnswer',score:5,text:'学习完"的、地、得"，学生应掌握哪三种结构形式？',answer:'①定语+的+名词（美丽的风景）②状语+地+动词（认真地学习）③动词/形容词+得+补语（跑得快）。'},
+        {id:'i2021_37',type:'shortAnswer',score:5,text:'指出"什么"在不同句子中的用法。',answer:'①什么颐和园→列举②想去什么地方→疑问③喜欢去什么地方就去→任指④什么地方都想去→任指无条件⑤想去什么地方→疑问'},
+        {id:'i2021_38',type:'shortAnswer',score:5,text:'写出"了"的三种句子形式。',answer:'了1：动词+了+宾语（我吃了饭）表完成。了2：谓语+了（他走了）表变化。了3：动词+了+宾语+了（我吃了饭了）完成+变化。'},
+        {id:'i2021_39',type:'shortAnswer',score:5,text:'分析多重复句："我讨厌定时约会，到得早，显得太急切；到迟了，显得摆架子；准时到，似乎太拘谨；索性不去，又显得没礼貌。"',answer:'一层：讨厌‖四个分句（因果）二层：四句并列。三层：每句内部因果（因为到得早，所以显得急切）。'},
+        {id:'i2021_40',type:'shortAnswer',score:5,text:'写出时量补语的四种位置。',answer:'①S+V+时量+O（学三年汉语）②S+V+O+V+时量（学汉语学了三年）③把+O+V+时量（把汉语学了三年）④O+时量+没+V（汉语三年没学）'},
+        {id:'i2021_41',type:'correction',score:3,text:'改正并分析："我经常在爸爸的书房里把书拿出来。"',answer:'改为"从爸爸书房里把书拿出来"或"在书房里拿书"。把字句动词不能是简单趋向补语。'},
+        {id:'i2021_42',type:'correction',score:3,text:'改正并分析："这么漂亮的杯子我可恨不得用。"',answer:'改为"舍不得用"或"真想用"。"恨不得"表急切想做，此处语义不当。'},
+        {id:'i2021_43',type:'correction',score:3,text:'改正并分析："老师对我们非常热情，一直到楼下送我们。"',answer:'改为"一直把我们送到楼下"。语序不当，应用"把"字句或"V到"结构。'},
+        {id:'i2021_44',type:'correction',score:3,text:'改正并分析："刚才是我糊涂，现在我终于明白上来了。"',answer:'改为"终于明白了"。"上来"作趋向补语此处语义不当。'},
+        {id:'i2021_45',type:'correction',score:3,text:'改正并分析："我们班拥有八个国家的同学。"',answer:'改为"有来自八个国家的同学"。"拥有"用于抽象或正式场合，此处用"有"更合适。'},
+        {id:'i2021_46',type:'lessonPlan',score:0,text:'课文：甲：开开电视，看有没有好节目。乙：怎么不亮？甲：插头没插上。乙：屋子里太亮了。拉上窗帘。甲：外边风太大，关上窗户好吗？乙：关上吧。教学语法点"V+上"，表示结果或目的。写出简要教案。',answer:'导入(2分)：动作演示"打开书/关上书"。展示(8分)：放上→关上→穿上→写上→带上。操练(15分)：替换"___上"。情景(10分)：请把本子合上/把门关上。总结(5分)：V+上表有结果或达到目的。'}
       ]},
-      {id:'xh_p2', name:'现代汉语 · 历年真题（二）', icon:'🗣️', summary:'现代汉语 · 历年真题（二） · 共39题', questions:[
-        {id:'zxh2_1', type:'fill', score:1, text:'1. 现代汉语方言大致可以分为七大方言区，即________、吴方言、闽方言、赣方言、客家方言、湘方言和粤方言', answer:'北方方言'},
-        {id:'zxh2_2', type:'fill', score:1, text:'2. 普通话中只能充当韵尾的辅音是________', answer:'ng'},
-        {id:'zxh2_3', type:'fill', score:1, text:'3. "我没有和他打过羽毛球"中"过"的词性是_________', answer:'助词'},
-        {id:'zxh2_4', type:'fill', score:1, text:'4. 根据《简化字总表》，"竈"简化为________', answer:'灶'},
-        {id:'zxh2_5', type:'fill', score:1, text:'5. "请你帮我把这本书带给小王"属于__________', answer:'祈使句'},
-        {id:'zxh2_6', type:'fill', score:1, text:'6. 从词的内部构造来看，"车辆"属于________式', answer:'补充'},
-        {id:'zxh2_7', type:'fill', score:1, text:'7. "希望"中"希"的韵母属于_____________呼', answer:'齐齿'},
-        {id:'zxh2_8', type:'fill', score:1, text:'8. ________是古今文字的分水岭', answer:'隶书'},
-        {id:'zxh2_9', type:'fill', score:1, text:'9. "蝙蝠侠是个漫画英雄"包含__________个语素', answer:'八'},
-        {id:'zxh2_10', type:'fill', score:1, text:'10. 反义词指某义项构成相反关系或________关系', answer:'相对'},
-        {id:'zxh2_11', type:'fill', score:1, text:'11.（1）横huéng', answer:'改为héng，韵母ueng只拼零声母'},
-        {id:'zxh2_12', type:'fill', score:1, text:'11.（2）香hiāng', answer:'改为xiāng'},
-        {id:'zxh2_13', type:'fill', score:1, text:'12.（1）皮袄pí ǎo', answer:'pí\'ǎo'},
-        {id:'zxh2_14', type:'fill', score:1, text:'12.（2）绣花xioùhuā', answer:'xiùhuā'},
-        {id:'zxh2_15', type:'fill', score:1, text:'12.（3）火花hǔohuā', answer:'huǒhuā'},
-        {id:'zxh2_16', type:'fill', score:1, text:'12.（4）蹲守duénshǒu', answer:'dūnshǒu'},
-        {id:'zxh2_17', type:'fill', score:1, text:'13.（1）来辙可追', answer:'者'},
-        {id:'zxh2_18', type:'fill', score:1, text:'13.（2）责无旁代', answer:'贷'},
-        {id:'zxh2_19', type:'fill', score:1, text:'13.（3）世外桃园', answer:'源'},
-        {id:'zxh2_20', type:'fill', score:1, text:'13.（4）怨天犹人', answer:'尤'},
-        {id:'zxh2_21', type:'fill', score:1, text:'13.（5）汗流夹背', answer:'浃'},
-        {id:'zxh2_22', type:'fill', score:1, text:'13.（6）浑浑恶恶', answer:'噩'},
-        {id:'zxh2_23', type:'fill', score:1, text:'14.（1）足球是我们很优势的项目', answer:'优势误为形容词，改为优秀'},
-        {id:'zxh2_24', type:'fill', score:1, text:'14.（2）双方进行了友好的商量', answer:'商量改为协商'},
-        {id:'zxh2_25', type:'fill', score:1, text:'15.（1）我们坚强抵制资产阶级思想的腐蚀', answer:'坚强改为坚决'},
-        {id:'zxh2_26', type:'fill', score:1, text:'15.（2）许多学生缺乏的是睡眠的严重不足', answer:'句式杂糅'},
-        {id:'zxh2_27', type:'choice', score:1, text:'16.（1）阳台上掉下去一件衣服', answer:'A', options:['A.存现句','B.数量补语','C.被动句','D.兼语句']},
-        {id:'zxh2_28', type:'choice', score:1, text:'16.（2）我忙得连约会的时间也没有', answer:'C', options:['A.结果补语','B.趋向补语','C.强调句','D.双宾句']},
-        {id:'zxh2_29', type:'choice', score:1, text:'16.（3）你能借我1000块钱吗', answer:'D', options:['A.存现句','B.连动句','C.数量补语','D.双宾句']},
-        {id:'zxh2_30', type:'choice', score:1, text:'16.（4）我从来没有说过谎', answer:'A', options:['A.离合词用法','B.结果补语','C.连动句','D.兼语句']},
-        {id:'zxh2_31', type:'choice', score:1, text:'16.（5）我忙得连吃饭的时间也没有', answer:'C', options:['A.结果补语','B.趋向补语','C.强调句','D.双宾句']},
-        {id:'zxh2_32', type:'choice', score:1, text:'16.（6）我们都叫他刘叔叔', answer:'D', options:['A.存现句','B.兼语句','C.比较句','D.双宾句']},
-        {id:'zxh2_33', type:'choice', score:1, text:'16.（7）我已经去过五回了', answer:'D', options:['A.双宾句','B.连动句','C.趋向补语','D.动量补语']},
-        {id:'zxh2_34', type:'choice', score:1, text:'16.（8）玛丽想出来一个好主意', answer:'D', options:['A.可能补语','B.程度补语','C.状态补语','D.趋向补语']},
-        {id:'zxh2_35', type:'choice', score:1, text:'16.（9）游了一个多小时的泳了', answer:'A', options:['A.离合词用法','B.结果补语','C.连动句','D.兼语句']},
-        {id:'zxh2_36', type:'choice', score:1, text:'16.（10）他给了我一套书', answer:'D', options:['A.数量补语','B.离合词用法','C.连动句','D.双宾句']},
-        {id:'zxh2_37', type:'fill', score:1, text:'17. 举例说明普通话的韵尾', answer:'位于韵腹后面的音素'},
-        {id:'zxh2_38', type:'fill', score:1, text:'18. 举例说明普通话的韵腹', answer:'韵母中开口度最大的元音'},
-        {id:'zxh2_39', type:'fill', score:1, text:'19. 举例说明同音词和多义词的区别', answer:'同音词语音同意义无联系'},
+      {id:'ica_2024', name:'ICA 2024年题库', icon:'🗓️', summary:'ICA 2024年题库 · 68题', questions:[
+        {id:'i2024_1',type:'choice',score:1,text:'下列哪个汉字的声调是阳平（第二声）？',answer:'C',options:["A.天","B.地","C.河","D.月"]},
+        {id:'i2024_2',type:'choice',score:1,text:'"我昨天去超市买了很多东西"，"昨天"是什么成分？',answer:'D',options:["A.主语","B.谓语","C.宾语","D.时间状语"]},
+        {id:'i2024_3',type:'choice',score:1,text:'以下哪个词语是形容词？',answer:'B',options:["A.跑步","B.美丽","C.学校","D.打击"]},
+        {id:'i2024_4',type:'choice',score:1,text:'"把"字句"他把书放在桌子上"中，"把书"是？',answer:'D',options:["A.主语","B.谓语","C.宾语","D.状语"]},
+        {id:'i2024_5',type:'choice',score:1,text:'下列关于"的""地""得"用法正确的是？',answer:'B',options:["A.高兴(的)跳起来","B.认真(地)学习","C.红(得)像火","D.以上都对"]},
+        {id:'i2024_6',type:'choice',score:1,text:'"你吃饭了吗？"属于？',answer:'B',options:["A.陈述句","B.疑问句","C.祈使句","D.感叹句"]},
+        {id:'i2024_7',type:'choice',score:1,text:'下列哪个词语是外来词？',answer:'A',options:["A.葡萄","B.人民","C.国家","D.学校"]},
+        {id:'i2024_8',type:'choice',score:1,text:'"我喜欢唱歌，也喜欢跳舞。"使用的关联词语是？',answer:'C',options:["A.不但…而且…","B.虽然…但是…","C.既…又…","D.因为…所以…"]},
+        {id:'i2024_9',type:'choice',score:1,text:'"少壮不努力，老大徒伤悲"出自？',answer:'C',options:["A.《论语》","B.《孟子》","C.《长歌行》","D.《诗经》"]},
+        {id:'i2024_10',type:'choice',score:1,text:'下列汉字中属于象形字的是？',answer:'B',options:["A.休","B.日","C.明","D.林"]},
+        {id:'i2024_11',type:'choice',score:1,text:'汉语"三音节词"的重音模式一般是？',answer:'A',options:["A.中·重·轻","B.重·中·轻","C.轻·中·重","D.中·轻·重"]},
+        {id:'i2024_12',type:'choice',score:1,text:'"我不明白这个词的意思。""明白"的反义词是？',answer:'A',options:["A.糊涂","B.清楚","C.知道","D.理解"]},
+        {id:'i2024_13',type:'choice',score:1,text:'"他跑得像兔子一样快。"使用的修辞手法是？',answer:'A',options:["A.比喻","B.拟人","C.夸张","D.排比"]},
+        {id:'i2024_14',type:'choice',score:1,text:'形容做事不认真的成语是？',answer:'C',options:["A.一丝不苟","B.全神贯注","C.马马虎虎","D.聚精会神"]},
+        {id:'i2024_15',type:'choice',score:1,text:'"中国有五十六个民族"中"五十六个"是？',answer:'B',options:["A.名词","B.数量词","C.形容词","D.动词"]},
+        {id:'i2024_16',type:'choice',score:1,text:'"我去过北京三次。"中"三次"是？',answer:'A',options:["A.动量词","B.名量词","C.时量词","D.形量词"]},
+        {id:'i2024_17',type:'choice',score:1,text:'下列哪个词语的拼音是正确的？',answer:'D',options:["A.朋友péng you","B.老师lǎo shī","C.学生xué shēng","D.以上都对"]},
+        {id:'i2024_18',type:'choice',score:1,text:'"请你帮我拿一下书。"属于？',answer:'C',options:["A.陈述句","B.疑问句","C.祈使句","D.感叹句"]},
+        {id:'i2024_19',type:'choice',score:1,text:'"她是一个很善良的女孩。"中"善良"是？',answer:'C',options:["A.名词","B.动词","C.形容词","D.副词"]},
+        {id:'i2024_20',type:'choice',score:1,text:'"，"这个标点符号叫？',answer:'B',options:["A.句号","B.逗号","C.顿号","D.分号"]},
+        {id:'i2024_21',type:'fill',score:1,text:'"好"的拼音是____。',answer:'hǎo'},
+        {id:'i2024_22',type:'fill',score:1,text:'我______（已经 曾经）去过上海了。',answer:'已经'},
+        {id:'i2024_23',type:'fill',score:1,text:'"山重水复疑无路，________。"',answer:'柳暗花明又一村'},
+        {id:'i2024_24',type:'fill',score:1,text:'汉语的四种基本声调是阴平、阳平、____和去声。',answer:'上声'},
+        {id:'i2024_25',type:'fill',score:1,text:'他是一个______（幽默 滑稽）的人，总是能让大家开心。',answer:'幽默'},
+        {id:'i2024_26',type:'fill',score:1,text:'我们要爱护______（环境 处境）。',answer:'环境'},
+        {id:'i2024_27',type:'fill',score:1,text:'"少小离家老大回，________。"',answer:'乡音无改鬓毛衰'},
+        {id:'i2024_28',type:'fill',score:1,text:'汉字的造字方法主要有象形、指事、会意和____。',answer:'形声'},
+        {id:'i2024_29',type:'fill',score:1,text:'我喜欢春天，因为春天______（到处 处处）都是鲜花。',answer:'到处'},
+        {id:'i2024_30',type:'fill',score:1,text:'"桃花潭水深千尺，________。"',answer:'不及汪伦送我情'},
+        {id:'i2024_31',type:'fill',score:1,text:'你______（必须 必需）按时完成作业。',answer:'必须'},
+        {id:'i2024_32',type:'fill',score:1,text:'他跑得______（很快 飞快）。',answer:'很快'},
+        {id:'i2024_33',type:'fill',score:1,text:'"两个黄鹂鸣翠柳，________。"',answer:'一行白鹭上青天'},
+        {id:'i2024_34',type:'fill',score:1,text:'汉语中常用的语气词有啊、呢、____等。',answer:'吧'},
+        {id:'i2024_35',type:'fill',score:1,text:'他每天都______（坚持 保持）锻炼身体。',answer:'坚持'},
+        {id:'i2024_36',type:'fill',score:1,text:'"欲穷千里目，________。"',answer:'更上一层楼'},
+        {id:'i2024_37',type:'fill',score:1,text:'这是一本很______（有趣 兴趣）的书。',answer:'有趣'},
+        {id:'i2024_38',type:'fill',score:1,text:'我______（希望 愿望）明天是晴天。',answer:'希望'},
+        {id:'i2024_39',type:'fill',score:1,text:'"遥知兄弟登高处，________。"',answer:'遍插茱萸少一人'},
+        {id:'i2024_40',type:'fill',score:1,text:'他______（突然 偶然）生病了。',answer:'突然'},
+        {id:'i2024_41',type:'judge',score:1,text:'"我明天去北京"和"明天我去北京"意思一样。',answer:'√'},
+        {id:'i2024_42',type:'judge',score:1,text:'"安静"和"宁静"是近义词。',answer:'√'},
+        {id:'i2024_43',type:'judge',score:1,text:'"他把教室打扫得干干净净。"是"把"字句。',answer:'√'},
+        {id:'i2024_44',type:'judge',score:1,text:'"我非常喜欢吃苹果，但是我不喜欢吃香蕉。"用"不但…而且…"。',answer:'×'},
+        {id:'i2024_45',type:'judge',score:1,text:'"美丽"的反义词是"丑陋"。',answer:'√'},
+        {id:'i2024_46',type:'judge',score:1,text:'"你吃饭了吗？"是陈述句。',answer:'×'},
+        {id:'i2024_47',type:'judge',score:1,text:'"葡萄"是汉语固有词汇。',answer:'×'},
+        {id:'i2024_48',type:'judge',score:1,text:'"我喜欢唱歌，也喜欢跳舞。"是并列关系句子。',answer:'√'},
+        {id:'i2024_49',type:'judge',score:1,text:'"少壮不努力，老大徒伤悲"出自《论语》。',answer:'×'},
+        {id:'i2024_50',type:'judge',score:1,text:'"日"是象形字。',answer:'√'},
+        {id:'i2024_51',type:'judge',score:1,text:'"他跑得像兔子一样快。"用了比喻。',answer:'√'},
+        {id:'i2024_52',type:'judge',score:1,text:'"马马虎虎"形容做事认真细致。',answer:'×'},
+        {id:'i2024_53',type:'judge',score:1,text:'"中国有五十六个民族"中"五十六个"是数量词。',answer:'√'},
+        {id:'i2024_54',type:'judge',score:1,text:'"我去过北京三次"中"三次"是名量词。',answer:'×'},
+        {id:'i2024_55',type:'judge',score:1,text:'"朋友"的拼音是"péng yǒu"。',answer:'√'},
+        {id:'i2024_56',type:'judge',score:1,text:'"请你帮我拿一下书。"是祈使句。',answer:'√'},
+        {id:'i2024_57',type:'judge',score:1,text:'"善良"是形容词。',answer:'√'},
+        {id:'i2024_58',type:'judge',score:1,text:'"，"这个标点符号叫逗号。',answer:'√'},
+        {id:'i2024_59',type:'judge',score:1,text:'"好"的声调是阳平。',answer:'×'},
+        {id:'i2024_60',type:'judge',score:1,text:'"山重水复疑无路，柳暗花明又一村"出自《游山西村》。',answer:'√'},
+        {id:'i2024_61',type:'shortAnswer',score:5,text:'简述"把"字句的基本结构和特点。',answer:'结构：主语+把+宾语+动词+其他。特点：强调处置；宾语有定；动词不能是单个动词。'},
+        {id:'i2024_62',type:'shortAnswer',score:5,text:'举例说明形容词的主要语法功能。',answer:'①作定语（美丽的花）②作谓语（她很漂亮）③作补语（跑得很快）。'},
+        {id:'i2024_63',type:'shortAnswer',score:5,text:'谈谈汉语中常用的修辞手法及其作用。',answer:'①比喻：生动形象②拟人：增强趣味③夸张：突出特点④排比：增强语势。'},
+        {id:'i2024_64',type:'shortAnswer',score:5,text:'解释"关联词语"并列举常见类型。',answer:'关联词是连接分句表示关系的词。并列（既…又）、递进（不但…而且）、转折（虽然…但）、因果（因为…所以）、假设（如果…就）、条件（只要…就）。'},
+        {id:'i2024_65',type:'shortAnswer',score:5,text:'简述量词的分类并举例。',answer:'①名量词：事物的单位（个）②动量词：动作次数（次）③时量词：时间（天）。'},
+        {id:'i2024_66',type:'shortAnswer',score:5,text:'论述如何有效教授汉语语法。',answer:'①语境教学②对比教学③多样化方法④循序渐进⑤大量练习⑥文化渗透。'},
+        {id:'i2024_67',type:'shortAnswer',score:5,text:'如何培养汉语交际能力？',answer:'①创设真实情境②鼓励参与③口语训练④跨文化意识⑤多媒体资源⑥课外实践。'},
+        {id:'i2024_68',type:'shortAnswer',score:5,text:'论述汉字教学的重要性和方法。',answer:'重要：汉语组成+文化载体+提高效果。方法：象形+部件+故事+游戏+书写+文化渗透。'}
       ]},
-      {id:'xh_p3', name:'现代汉语 · 历年真题（三）', icon:'🗣️', summary:'现代汉语 · 历年真题（三） · 共39题', questions:[
-        {id:'zxh3_1', type:'fill', score:1, text:'1. 根据"六书"理论，"山"字的造字法是________', answer:'象形'},
-        {id:'zxh3_2', type:'fill', score:1, text:'2. 词类划分的主要依据是词的________', answer:'语法功能'},
-        {id:'zxh3_3', type:'fill', score:1, text:'3. "芭蕾舞"属于________外来词', answer:'音译加意译'},
-        {id:'zxh3_4', type:'fill', score:1, text:'4. 根据六书理论，"采"的造字法是________', answer:'会意'},
-        {id:'zxh3_5', type:'fill', score:1, text:'5. "chángchéng"这两个音节包含________个音素', answer:'6'},
-        {id:'zxh3_6', type:'fill', score:1, text:'6. "乌云"这两个音节中包含__________个音素', answer:'3'},
-        {id:'zxh3_7', type:'fill', score:1, text:'7. "竈"简化为________', answer:'灶'},
-        {id:'zxh3_8', type:'fill', score:1, text:'8. "啤酒"属于_________外来词', answer:'音译加意译'},
-        {id:'zxh3_9', type:'fill', score:1, text:'9. "霓虹灯"属于________外来词', answer:'音译兼意译'},
-        {id:'zxh3_10', type:'fill', score:1, text:'10. "歡"简化为_________', answer:'欢'},
-        {id:'zxh3_11', type:'fill', score:1, text:'11.（1）梭sō', answer:'改为suō，o只拼唇音声母'},
-        {id:'zxh3_12', type:'fill', score:1, text:'11.（2）漠muò', answer:'改为mò，uo不拼唇音'},
-        {id:'zxh3_13', type:'fill', score:1, text:'12.（1）饥饿jīè', answer:'jī\'è'},
-        {id:'zxh3_14', type:'fill', score:1, text:'12.（2）可爱kěài', answer:'kě\'ài'},
-        {id:'zxh3_15', type:'fill', score:1, text:'12.（3）乌鸦ūyā', answer:'wūyā'},
-        {id:'zxh3_16', type:'fill', score:1, text:'12.（4）堤岸dīàn', answer:'dī\'àn'},
-        {id:'zxh3_17', type:'fill', score:1, text:'13.（1）精采', answer:'彩'},
-        {id:'zxh3_18', type:'fill', score:1, text:'13.（2）得不尝失', answer:'偿'},
-        {id:'zxh3_19', type:'fill', score:1, text:'13.（3）生死忧关', answer:'攸'},
-        {id:'zxh3_20', type:'fill', score:1, text:'13.（4）对针下药', answer:'症'},
-        {id:'zxh3_21', type:'fill', score:1, text:'13.（5）如雷灌耳', answer:'贯'},
-        {id:'zxh3_22', type:'fill', score:1, text:'13.（6）根深底固', answer:'蒂'},
-        {id:'zxh3_23', type:'fill', score:1, text:'14.（1）在祖国边境放哨站岗', answer:'边境改为边疆'},
-        {id:'zxh3_24', type:'fill', score:1, text:'14.（2）松骨峰战争', answer:'战争改为战斗'},
-        {id:'zxh3_25', type:'fill', score:1, text:'15.（1）只要具备了自学能力，才能掌握更多知识', answer:'关联词不当'},
-        {id:'zxh3_26', type:'fill', score:1, text:'15.（2）努力构建和谐', answer:'缺宾语，加"社会"'},
-        {id:'zxh3_27', type:'choice', score:1, text:'16.（1）我们称呼他汉字叔叔', answer:'A', options:['A.双宾句','B.存现句','C.兼语句','D.比较句']},
-        {id:'zxh3_28', type:'choice', score:1, text:'16.（2）我今年住过一次院', answer:'A', options:['A.离合词用法','B.结果补语','C.存现句','D.兼语句']},
-        {id:'zxh3_29', type:'choice', score:1, text:'16.（3）我一个字都不会跟他说', answer:'A', options:['A.强调句','B.数量补语','C.连动句','D.兼语句']},
-        {id:'zxh3_30', type:'choice', score:1, text:'16.（4）衣服让我弄脏了', answer:'A', options:['A.被动句','B.状态补语','C.兼语句','D.存现句']},
-        {id:'zxh3_31', type:'choice', score:1, text:'16.（5）我最近累得慌', answer:'C', options:['A.结果补语','B.可能补语','C.程度补语','D.状态补语']},
-        {id:'zxh3_32', type:'choice', score:1, text:'16.（6）你是想吃水饺，还是吃面条', answer:'D', options:['A.并列复句','B.转折复句','C.顺承复句','D.选择复句']},
-        {id:'zxh3_33', type:'choice', score:1, text:'16.（7）要么住学校，要么住酒店', answer:'D', options:['A.递进复句','B.并列复句','C.转折复句','D.选择复句']},
-        {id:'zxh3_34', type:'choice', score:1, text:'16.（8）这个工作我一天也干不下去了', answer:'B', options:['A.结果补语','B.主谓谓语句','C.数量补语','D.双宾句']},
-        {id:'zxh3_35', type:'choice', score:1, text:'16.（9）我最近累得很，一回家就想睡觉', answer:'C', options:['A.状态补语','B.结果补语','C.程度补语','D.可能补语']},
-        {id:'zxh3_36', type:'choice', score:1, text:'16.（10）我们称呼他汉字叔叔', answer:'A', options:['A.双宾句','B.存现句','C.兼语句','D.比较句']},
-        {id:'zxh3_37', type:'fill', score:1, text:'17. 举例说明汉字部件的组合方式', answer:'左右上下全包围半包围结构'},
-        {id:'zxh3_38', type:'fill', score:1, text:'18. 举例说明层次分析的原则', answer:'结构功能意义三原则'},
-        {id:'zxh3_39', type:'fill', score:1, text:'19. 简述现代汉语句子语气的类型', answer:'陈述疑问祈使感叹四类'},
-      ]},
-      {id:'jx_p1', name:'教学理论 · 历年真题（一）', icon:'📚', summary:'教学理论 · 历年真题（一） · 共23题', questions:[
-        {id:'zjx1_1', type:'fill', score:1, text:'1. "对外汉语教学"事业产生于20世纪___________年代', answer:'50'},
-        {id:'zjx1_2', type:'fill', score:1, text:'2. 第二语言教学的中心环节和基本方式是___________', answer:'课堂教学'},
-        {id:'zjx1_3', type:'fill', score:1, text:'3. 让学生自己发现规则的教学方法是_________教学', answer:'启发式'},
-        {id:'zjx1_4', type:'fill', score:1, text:'4. 主客观性试题是从__________的角度划分的', answer:'评分客观性'},
-        {id:'zjx1_5', type:'fill', score:1, text:'5. 沉浸式学习和__________管理是速成教学的方式', answer:'封闭式'},
-        {id:'zjx1_6', type:'fill', score:1, text:'6. ________是指目的语掌握不好产生的规律性错误', answer:'偏误'},
-        {id:'zjx1_7', type:'fill', score:1, text:'7. 提出中介语假说的是___________', answer:'塞林克'},
-        {id:'zjx1_8', type:'fill', score:1, text:'8. 文化接受过程分为观光期、__________期、逐渐适应期、接近或完全复原期', answer:'挫折'},
-        {id:'zjx1_9', type:'fill', score:1, text:'9. 教师的"教"和学生的"学"之间更加强调_______', answer:'学'},
-        {id:'zjx1_10', type:'fill', score:1, text:'10. 文化接受过程四个阶段：蜜月阶段、___________、调整阶段和适应阶段', answer:'挫折阶段'},
-        {id:'zjx1_11', type:'choice', score:1, text:'11. 中介语理论的代表人物是', answer:'C', options:['A.拉多','B.科德','C.塞林克','D.斯金纳']},
-        {id:'zjx1_12', type:'choice', score:1, text:'12. 语音教学应先教', answer:'A', options:['A.声母','B.韵母','C.音节','D.声调']},
-        {id:'zjx1_13', type:'fill', score:1, text:'13. 800学时零起点学生词汇量约( )', answer:'D'},
-        {id:'zjx1_14', type:'fill', score:1, text:'14. 国内少数民族汉语教学属于( )', answer:'C'},
-        {id:'zjx1_15', type:'fill', score:1, text:'15. 不属于任务教学法特点的是', answer:'D'},
-        {id:'zjx1_16', type:'choice', score:1, text:'16. 教材编写的直接理论依据是', answer:'B', options:['A.语言学理论','B.教育学理论','C.心理学理论','D.文化学理论']},
-        {id:'zjx1_17', type:'fill', score:1, text:'17. 假条通知日记等的写作最好放在（）', answer:'B'},
-        {id:'zjx1_18', type:'fill', score:1, text:'18. 全被动句测试属于（）', answer:'C'},
-        {id:'zjx1_19', type:'fill', score:1, text:'19. 四大环节的中心环节是_______', answer:'C'},
-        {id:'zjx1_20', type:'fill', score:1, text:'20. 关于口语课堂教学说法正确的是', answer:'D'},
-        {id:'zjx1_21', type:'fill', score:1, text:'1. 失误与偏误', answer:'失误偶然性偏误规律性'},
-        {id:'zjx1_22', type:'fill', score:1, text:'2. 文化休克', answer:'文化不适应产生的深度焦虑'},
-        {id:'zjx1_23', type:'fill', score:1, text:'3. 留学生常说"他是聪明"分析原因并改正', answer:'母语负迁移，去掉是'},
-      ]},
-      {id:'jx_p2', name:'教学理论 · 历年真题（二）', icon:'📚', summary:'教学理论 · 历年真题（二） · 共23题', questions:[
-        {id:'zjx2_1', type:'fill', score:1, text:'1. 学科理论主要包括_____________和教学法两部分', answer:'教学理论'},
-        {id:'zjx2_2', type:'fill', score:1, text:'2. 乔姆斯基将深层结构和表层结构的联结方式称为_________', answer:'可渗透性'},
-        {id:'zjx2_3', type:'fill', score:1, text:'3. 替换练习的心理学基础是_________', answer:'行为主义'},
-        {id:'zjx2_4', type:'fill', score:1, text:'4. 儿童习得第一语言的过程有辨声练音期、声语过渡期、语言形成发展期和________', answer:'语言成熟完善期'},
-        {id:'zjx2_5', type:'fill', score:1, text:'5. 直接法主张仿照幼儿学习________的自然过程', answer:'母语'},
-        {id:'zjx2_6', type:'fill', score:1, text:'6. 先天论的代表人物是美国语言学家________', answer:'乔姆斯基'},
-        {id:'zjx2_7', type:'fill', score:1, text:'7. 文化不适应而产生的深度焦虑感被称为________', answer:'文化休克'},
-        {id:'zjx2_8', type:'fill', score:1, text:'8. ________认为人类大脑中有先天"语言习得机制"', answer:'乔姆斯基'},
-        {id:'zjx2_9', type:'fill', score:1, text:'9. 文化接受过程分为观光期、__________期、逐渐适应期、接近或完全复原期', answer:'挫折'},
-        {id:'zjx2_10', type:'fill', score:1, text:'10. 对外汉语教学是一种________的语言教学', answer:'跨文化'},
-        {id:'zjx2_11', type:'fill', score:1, text:'11. 800学时零起点词汇量约( )', answer:'D'},
-        {id:'zjx2_12', type:'fill', score:1, text:'12. "在墙上挂着一个中国结"的偏误类型', answer:'C'},
-        {id:'zjx2_13', type:'fill', score:1, text:'13. 以模仿为主的教学流派是（）', answer:'B'},
-        {id:'zjx2_14', type:'fill', score:1, text:'14. 完全不使用学生母语的教学法是（）', answer:'A'},
-        {id:'zjx2_15', type:'fill', score:1, text:'15. 以"规范"语言为教授脚本的教学法是（）', answer:'A'},
-        {id:'zjx2_16', type:'fill', score:1, text:'16. 不属于潜能测试内容的是（）', answer:'D'},
-        {id:'zjx2_17', type:'choice', score:1, text:'17. 讲练"实在疼得忍受不了了"最适合的方法', answer:'A', options:['A.设置情景','B.讲解词义','C.做翻译练习','D.替换练习']},
-        {id:'zjx2_18', type:'fill', score:1, text:'18. （）是第二语言教学的中心环节', answer:'D'},
-        {id:'zjx2_19', type:'fill', score:1, text:'19. 不属于多媒体汉语课堂教学特点的是', answer:'C'},
-        {id:'zjx2_20', type:'choice', score:1, text:'20. 《报刊阅读》《新闻听力》按（）划分', answer:'D', options:['A.教学方法','B.教学对象','C.教学手段','D.课程类型']},
-        {id:'zjx2_21', type:'fill', score:1, text:'1. 偏误分析', answer:'对偏误进行系统分析'},
-        {id:'zjx2_22', type:'fill', score:1, text:'2. 中介语', answer:'二语习得中的过渡语言系统'},
-        {id:'zjx2_23', type:'fill', score:1, text:'3. "他上去楼了"分析原因并改正', answer:'趋向补语位置不对，改为他上楼去了'},
-      ]},
-      {id:'jx_p3', name:'教学理论 · 历年真题（三）', icon:'📚', summary:'教学理论 · 历年真题（三） · 共23题', questions:[
-        {id:'zjx3_1', type:'fill', score:1, text:'1. 乔姆斯基将深层结构和表层结构的联结方式称为_________', answer:'可渗透性'},
-        {id:'zjx3_2', type:'fill', score:1, text:'2. 《新概念英语》是________教学法的应用', answer:'视听'},
-        {id:'zjx3_3', type:'fill', score:1, text:'3. 对比分析包括描写、________、对比和预测', answer:'选择'},
-        {id:'zjx3_4', type:'fill', score:1, text:'4. 文化的属性有民族性、社会性、_________和阶段性', answer:'系统性'},
-        {id:'zjx3_5', type:'fill', score:1, text:'5. 语法翻译法忽视了__________', answer:'听说能力培养'},
-        {id:'zjx3_6', type:'fill', score:1, text:'6. 先给出语法规则后举例说明属于________法', answer:'演绎'},
-        {id:'zjx3_7', type:'fill', score:1, text:'7. 文化可分为物质文化、制度文化、________、心态文化', answer:'行为文化'},
-        {id:'zjx3_8', type:'fill', score:1, text:'8. 教学活动可概括为总体设计、教材编写、__________、成绩测试', answer:'课堂教学'},
-        {id:'zjx3_9', type:'fill', score:1, text:'9. 对外汉语教学是一种___________的语言教学', answer:'跨文化'},
-        {id:'zjx3_10', type:'fill', score:1, text:'10. 学科理论主要包括_____________和教学法', answer:'教学理论'},
-        {id:'zjx3_11', type:'fill', score:1, text:'11. 关于口语课堂教学说法正确的是', answer:'D'},
-        {id:'zjx3_12', type:'fill', score:1, text:'12. 偶然的口误或笔误是( )', answer:'C'},
-        {id:'zjx3_13', type:'choice', score:1, text:'13. 《现代汉语》属于（）教材', answer:'B', options:['A.选修课','B.必修课','C.专业方向课','D.公共课']},
-        {id:'zjx3_14', type:'fill', score:1, text:'14. "媒体—广播—电视—网络"的词汇教学方法是', answer:'D'},
-        {id:'zjx3_15', type:'fill', score:1, text:'15. 全被动句测试属于（）', answer:'C'},
-        {id:'zjx3_16', type:'fill', score:1, text:'16. 重复测试是验证试题（）的方法', answer:'B'},
-        {id:'zjx3_17', type:'fill', score:1, text:'17. 中介语偏误的特点是（）', answer:'B'},
-        {id:'zjx3_18', type:'fill', score:1, text:'18. 留学生课程中（）是主干课程', answer:'A'},
-        {id:'zjx3_19', type:'fill', score:1, text:'19. 对外汉语教学特点不包括（）', answer:'D'},
-        {id:'zjx3_20', type:'fill', score:1, text:'20. 以"规范"语言为教授脚本的教学法是（）', answer:'A'},
-        {id:'zjx3_21', type:'fill', score:1, text:'1. 泛化', answer:'将有限规则不恰当推及新现象'},
-        {id:'zjx3_22', type:'fill', score:1, text:'2. 任务教学法', answer:'以学生为中心以任务为途径'},
-        {id:'zjx3_23', type:'fill', score:1, text:'3. "大卫是高"分析原因并改正', answer:'母语负迁移，去掉是'},
-      ]},
-      {id:'wh_p1', name:'中国文化 · 历年真题（一）', icon:'🏯', summary:'中国文化 · 历年真题（一） · 共43题', questions:[
-        {id:'zwh1_1', type:'fill', score:1, text:'1. 腊八粥源于佛教的___________节', answer:'成道'},
-        {id:'zwh1_2', type:'fill', score:1, text:'2. 司母戊鼎以"__________"展出', answer:'后母戊鼎'},
-        {id:'zwh1_3', type:'fill', score:1, text:'3. 道教第一位天师是_______', answer:'张陵'},
-        {id:'zwh1_4', type:'fill', score:1, text:'4. 规模最大的编年体史书《___________》', answer:'资治通鉴'},
-        {id:'zwh1_5', type:'fill', score:1, text:'5. 郑和共___次出使海外', answer:'7'},
-        {id:'zwh1_6', type:'fill', score:1, text:'6. "五灵"指麟、龙、凤、________、虎', answer:'龟'},
-        {id:'zwh1_7', type:'fill', score:1, text:'7. 道学集大成者是__________', answer:'朱熹'},
-        {id:'zwh1_8', type:'fill', score:1, text:'8. ___________帝下令禁天主教', answer:'康熙'},
-        {id:'zwh1_9', type:'fill', score:1, text:'9. 文房四宝：宣纸、徽墨、___砚、湖笔', answer:'端'},
-        {id:'zwh1_10', type:'fill', score:1, text:'10. "五岳之宗"是________山', answer:'泰'},
-        {id:'zwh1_11', type:'fill', score:1, text:'11. 梅花五瓣象征寿、福、康宁、好德、________', answer:'善终'},
-        {id:'zwh1_12', type:'fill', score:1, text:'12. 最完整的清代王府___________', answer:'恭王府'},
-        {id:'zwh1_13', type:'fill', score:1, text:'13. 母亲兔年生乙，乙属_________', answer:'羊'},
-        {id:'zwh1_14', type:'fill', score:1, text:'14. 最早入选非遗的是_________和古琴', answer:'昆曲'},
-        {id:'zwh1_15', type:'fill', score:1, text:'15. 五种"世界遗产"包括自然遗产、__________、双遗产、文化景观和非物质', answer:'文化遗产'},
-        {id:'zwh1_16', type:'fill', score:1, text:'16. 第一个寺庙___________，第一个道观___________', answer:'白马寺；楼观台'},
-        {id:'zwh1_17', type:'fill', score:1, text:'17. 洛阳佛教祖庭___________寺和龙门石窟', answer:'白马'},
-        {id:'zwh1_18', type:'fill', score:1, text:'18. _____村被誉为"中国画里乡村"', answer:'宏'},
-        {id:'zwh1_19', type:'fill', score:1, text:'19. 《针灸甲乙经》_______《金匮要略》________', answer:'皇甫谧；张仲景'},
-        {id:'zwh1_20', type:'fill', score:1, text:'20. 杭州_______和苏州________是世界遗产', answer:'西湖；园林'},
-        {id:'zwh1_21', type:'choice', score:1, text:'21. 宗法制度核心是', answer:'C', options:['A.分封制','B.等级制','C.嫡长子继承制','D.家族制']},
-        {id:'zwh1_22', type:'choice', score:1, text:'22. 虎跑泉被誉为', answer:'C', options:['A.天下第一泉','B.天下第二泉','C.天下第三泉','D.天下第四泉']},
-        {id:'zwh1_23', type:'choice', score:1, text:'23. 端午节喝', answer:'A', options:['A.雄黄酒','B.菖蒲酒','C.桂花酒','D.菊花酒']},
-        {id:'zwh1_24', type:'choice', score:1, text:'24. 干支最早用', answer:'C', options:['A.纪年','B.纪月','C.纪日','D.纪时']},
-        {id:'zwh1_25', type:'choice', score:1, text:'25. 最大伊斯兰清真寺', answer:'B', options:['A.泉州清净寺','B.喀什艾提尕寺','C.广州怀圣寺','D.扬州仙鹤寺']},
-        {id:'zwh1_26', type:'choice', score:1, text:'26. 景泰蓝产地在', answer:'C', options:['A.无锡','B.天津','C.北京','D.杭州']},
-        {id:'zwh1_27', type:'choice', score:1, text:'27. "交头接耳"出自', answer:'A', options:['A.《水浒传》','B.《三国演义》','C.《红楼梦》','D.《西游记》']},
-        {id:'zwh1_28', type:'choice', score:1, text:'28. 不符合传统五行说的是', answer:'D', options:['A.水—黑—北','B.金—秋—商','C.火—朱雀—夏','D.木—秋—东']},
-        {id:'zwh1_29', type:'choice', score:1, text:'29. "天下第二行书"是', answer:'B', options:['A.《伯远帖》','B.《祭侄文稿》','C.《韭花帖》','D.《寒食帖》']},
-        {id:'zwh1_30', type:'choice', score:1, text:'30. 不属于"三大崇拜"', answer:'C', options:['A.君师崇拜','B.天地崇拜','C.神灵崇拜','D.祖先崇拜']},
-        {id:'zwh1_31', type:'fill', score:1, text:'31. 北宋四大书院有', answer:'BDE'},
-        {id:'zwh1_32', type:'fill', score:1, text:'32. 曾赴印度取经的有', answer:'BCD'},
-        {id:'zwh1_33', type:'fill', score:1, text:'33. "五常"指', answer:'D'},
-        {id:'zwh1_34', type:'fill', score:1, text:'34. 不是老子思想的是', answer:'B'},
-        {id:'zwh1_35', type:'fill', score:1, text:'35. 明成祖在位期间发生的有', answer:'ABCD'},
-        {id:'zwh1_36', type:'fill', score:1, text:'36. 关于山水画正确的有', answer:'BD'},
-        {id:'zwh1_37', type:'fill', score:1, text:'37. 属于"四功"的有', answer:'ABD'},
-        {id:'zwh1_38', type:'fill', score:1, text:'38. 关于禅宗不正确的有', answer:'ACD'},
-        {id:'zwh1_39', type:'fill', score:1, text:'39. 哲学家与观点对应正确的有', answer:'CDE'},
-        {id:'zwh1_40', type:'fill', score:1, text:'40. 有特定食品的传统节日有', answer:'ABC'},
-        {id:'zwh1_41', type:'fill', score:1, text:'41. 诸子百家', answer:'先秦至汉初各学派总称'},
-        {id:'zwh1_42', type:'fill', score:1, text:'42. 七音', answer:'五音加两偏音'},
-        {id:'zwh1_43', type:'fill', score:1, text:'43. 孔孟之道', answer:'以孔子孟子为代表'},
-      ]},
-      {id:'wh_p2', name:'中国文化 · 历年真题（二）', icon:'🏯', summary:'中国文化 · 历年真题（二） · 共43题', questions:[
-        {id:'zwh2_1', type:'fill', score:1, text:'1. 太和殿吻兽_______个', answer:'10'},
-        {id:'zwh2_2', type:'fill', score:1, text:'2. 江苏省_______市和杭州为中国七大古都', answer:'南京'},
-        {id:'zwh2_3', type:'fill', score:1, text:'3. 张衡制造________仪', answer:'浑天'},
-        {id:'zwh2_4', type:'fill', score:1, text:'4. 清代宫廷菜"___________"', answer:'满汉全席'},
-        {id:'zwh2_5', type:'fill', score:1, text:'5. 插柳纪念________', answer:'介之推'},
-        {id:'zwh2_6', type:'fill', score:1, text:'6. "中华第一灯"是__________灯', answer:'长信宫'},
-        {id:'zwh2_7', type:'fill', score:1, text:'7. 四次灭佛称"_________"', answer:'三武一宗'},
-        {id:'zwh2_8', type:'fill', score:1, text:'8. 文房四宝指宣纸、徽墨、___砚、湖笔', answer:'端'},
-        {id:'zwh2_9', type:'fill', score:1, text:'9. 母亲兔年生乙，乙属_________', answer:'羊'},
-        {id:'zwh2_10', type:'fill', score:1, text:'10. 乾陵是__________式帝陵', answer:'山陵'},
-        {id:'zwh2_11', type:'fill', score:1, text:'11. 2011年辛卯，2020年干支为______', answer:'庚子'},
-        {id:'zwh2_12', type:'fill', score:1, text:'12. 童试合格叫"_______"', answer:'生员'},
-        {id:'zwh2_13', type:'fill', score:1, text:'13. 四诊：望、闻、问、________', answer:'切'},
-        {id:'zwh2_14', type:'fill', score:1, text:'14. 五胡指匈奴、_________、羯、氐、羌', answer:'鲜卑'},
-        {id:'zwh2_15', type:'fill', score:1, text:'15. 最大传统园林是___________', answer:'承德避暑山庄'},
-        {id:'zwh2_16', type:'fill', score:1, text:'16. "三武一宗"前二个叫_____号，后两个叫_____号', answer:'谥；庙'},
-        {id:'zwh2_17', type:'fill', score:1, text:'17. 中国第一大佛是___________大佛', answer:'乐山'},
-        {id:'zwh2_18', type:'fill', score:1, text:'18. 孔子成___，孟子取___', answer:'仁；义'},
-        {id:'zwh2_19', type:'fill', score:1, text:'19. 表演手段：手、眼、身、______、______', answer:'法；步'},
-        {id:'zwh2_20', type:'fill', score:1, text:'20. 七大古都在河南的有安阳、_________、洛阳', answer:'开封'},
-        {id:'zwh2_21', type:'choice', score:1, text:'21. "左庙右社"的"庙"指', answer:'B', options:['A.孔庙','B.宗庙','C.帝王庙','D.天帝庙']},
-        {id:'zwh2_22', type:'choice', score:1, text:'22. 佛指骨舍利出土于', answer:'D', options:['A.云居寺','B.大报恩寺','C.雷峰塔','D.法门寺']},
-        {id:'zwh2_23', type:'choice', score:1, text:'23. 最早入选非遗戏曲是', answer:'D', options:['A.藏戏','B.京剧','C.粤剧','D.昆曲']},
-        {id:'zwh2_24', type:'choice', score:1, text:'24. "三大名楼"指', answer:'B', options:['A.岳阳楼/滕王阁/鹳鹊楼','B.岳阳楼/滕王阁/黄鹤楼','C.滕王阁/黄鹤楼/鹳鹊楼','D.黄鹤楼/鹳鹊楼/岳阳楼']},
-        {id:'zwh2_25', type:'choice', score:1, text:'25. 《步辇图》作者', answer:'C', options:['A.王维','B.韩滉','C.阎立本','D.周昉']},
-        {id:'zwh2_26', type:'choice', score:1, text:'26. 京剧行当有', answer:'B', options:['A.3种','B.4种','C.5种','D.6种']},
-        {id:'zwh2_27', type:'choice', score:1, text:'27. 铭文最多的青铜器', answer:'D', options:['A.司母戊鼎','B.长信宫灯','C.越王勾践剑','D.毛公鼎']},
-        {id:'zwh2_28', type:'choice', score:1, text:'28. 最早针灸学专著', answer:'B', options:['A.《大全》','B.《甲乙经》','C.《大成》','D.《聚英》']},
-        {id:'zwh2_29', type:'choice', score:1, text:'29. "天下第二行书"', answer:'B', options:['A.《伯远帖》','B.《祭侄文稿》','C.《韭花帖》','D.《寒食帖》']},
-        {id:'zwh2_30', type:'choice', score:1, text:'30. 不属于四大清真寺', answer:'B', options:['A.广州怀圣寺','B.南京净觉寺','C.泉州清净寺','D.杭州凤凰寺']},
-        {id:'zwh2_31', type:'fill', score:1, text:'31. 属于汉代文物的有', answer:'AB'},
-        {id:'zwh2_32', type:'fill', score:1, text:'32. 含"四君子"的人物有', answer:'BD'},
-        {id:'zwh2_33', type:'fill', score:1, text:'33. 五行匹配正确的有', answer:'CE'},
-        {id:'zwh2_34', type:'fill', score:1, text:'34. 山水画正确的有', answer:'BD'},
-        {id:'zwh2_35', type:'fill', score:1, text:'35. 四大名山石窟中已入选世界遗产的个数', answer:'B'},
-        {id:'zwh2_36', type:'fill', score:1, text:'36. "三通"中不属于的有', answer:'AB'},
-        {id:'zwh2_37', type:'fill', score:1, text:'37. 正确干支组合有', answer:'BD'},
-        {id:'zwh2_38', type:'fill', score:1, text:'38. 辽金西夏元主体民族依次', answer:'DABC'},
-        {id:'zwh2_39', type:'fill', score:1, text:'39. 属于"四心"的有', answer:'ACDE'},
-        {id:'zwh2_40', type:'fill', score:1, text:'40. 属于文化景观的有', answer:'BD'},
-        {id:'zwh2_41', type:'fill', score:1, text:'41. 封禅', answer:'泰山祭天'},
-        {id:'zwh2_42', type:'fill', score:1, text:'42. 梨园', answer:'唐代宫廷戏剧机构'},
-        {id:'zwh2_43', type:'fill', score:1, text:'43. 太学', answer:'汉代官办学府'},
-      ]},
-      {id:'wh_p3', name:'中国文化 · 历年真题（三）', icon:'🏯', summary:'中国文化 · 历年真题（三） · 共43题', questions:[
-        {id:'zwh3_1', type:'fill', score:1, text:'1. 黄山和__________山的世界文化遗产', answer:'泰'},
-        {id:'zwh3_2', type:'fill', score:1, text:'2. 最重青铜器____代后母戊鼎', answer:'商'},
-        {id:'zwh3_3', type:'fill', score:1, text:'3. 《金匮要略》作者___________', answer:'张仲景'},
-        {id:'zwh3_4', type:'fill', score:1, text:'4. 彩陶文化是__________文化', answer:'仰韶'},
-        {id:'zwh3_5', type:'fill', score:1, text:'5. 最大类书《___________》', answer:'永乐大典'},
-        {id:'zwh3_6', type:'fill', score:1, text:'6. 泰山是帝王_______地', answer:'封禅'},
-        {id:'zwh3_7', type:'fill', score:1, text:'7. 五岳：东岳______、西岳华山、南岳衡山、北岳恒山、中岳嵩山', answer:'泰山'},
-        {id:'zwh3_8', type:'fill', score:1, text:'8. 皇宫布局定律________', answer:'左庙右社'},
-        {id:'zwh3_9', type:'fill', score:1, text:'9. 院试合格叫______', answer:'生员'},
-        {id:'zwh3_10', type:'fill', score:1, text:'10. 最大地面古城_______', answer:'西安'},
-        {id:'zwh3_11', type:'fill', score:1, text:'11. 第一位天师是_______', answer:'张陵'},
-        {id:'zwh3_12', type:'fill', score:1, text:'12. 五胡：匈奴、鲜卑、_________、氐、羌', answer:'羯'},
-        {id:'zwh3_13', type:'fill', score:1, text:'13. 宫廷菜"___________"', answer:'满汉全席'},
-        {id:'zwh3_14', type:'fill', score:1, text:'14. 孟姜女姓______', answer:'姜'},
-        {id:'zwh3_15', type:'fill', score:1, text:'15. 黄山和__________山的世界文化遗产', answer:'泰'},
-        {id:'zwh3_16', type:'fill', score:1, text:'16. "三武一宗"前_____号后_____号', answer:'谥；庙'},
-        {id:'zwh3_17', type:'fill', score:1, text:'17. 洛阳祖庭和龙门石窟', answer:'白马寺'},
-        {id:'zwh3_18', type:'fill', score:1, text:'18. 禅宗祖师和开创寺院', answer:'达摩；少林'},
-        {id:'zwh3_19', type:'fill', score:1, text:'19. 七大古都：安阳、_________、洛阳在河南', answer:'开封'},
-        {id:'zwh3_20', type:'fill', score:1, text:'20. 杭州_______和苏州________世界遗产', answer:'西湖；园林'},
-        {id:'zwh3_21', type:'choice', score:1, text:'21. 火焰山指', answer:'B', options:['A.阴山','B.吐鲁番盆地','C.太行山','D.天山']},
-        {id:'zwh3_22', type:'choice', score:1, text:'22. 最长长城修建于', answer:'B', options:['A.春秋战国','B.秦代','C.汉代','D.明代']},
-        {id:'zwh3_23', type:'choice', score:1, text:'23. 不符合传统五行说', answer:'D', options:['A.水—黑—北','B.金—白—秋','C.火—朱雀—夏','D.土—黄—商']},
-        {id:'zwh3_24', type:'choice', score:1, text:'24. 道教最高尊神', answer:'C', options:['A.玉皇大帝','B.四方之神','C.三清','D.北极大帝']},
-        {id:'zwh3_25', type:'choice', score:1, text:'25. 中国旅游标志', answer:'E', options:['A.长城','B.熊猫','C.天坛','D.长信宫灯','E.马踏飞燕']},
-        {id:'zwh3_26', type:'choice', score:1, text:'26. 不符合传统五行说', answer:'D', options:['A.水—黑—北','B.金—秋—商','C.火—朱雀—夏','D.木—秋—东']},
-        {id:'zwh3_27', type:'choice', score:1, text:'27. 最早针灸学专著', answer:'B', options:['A.《大全》','B.《甲乙经》','C.《大成》','D.《聚英》']},
-        {id:'zwh3_28', type:'choice', score:1, text:'28. 宗法制度核心', answer:'C', options:['A.分封制','B.等级制','C.嫡长子继承制','D.家族制']},
-        {id:'zwh3_29', type:'choice', score:1, text:'29. 五行：辛是丙的', answer:'D', options:['A.印','B.食神或伤官','C.官','D.财']},
-        {id:'zwh3_30', type:'choice', score:1, text:'30. 与古琴无关的是', answer:'D', options:['A.高山流水','B.嵇康就义','C.渔樵问答','D.滥竽充数']},
-        {id:'zwh3_31', type:'fill', score:1, text:'31. 属于绘画四品的有', answer:'CDE'},
-        {id:'zwh3_32', type:'fill', score:1, text:'32. 到印度取经的僧人有', answer:'ABD'},
-        {id:'zwh3_33', type:'fill', score:1, text:'33. 有特定食品的传统节日', answer:'ABC'},
-        {id:'zwh3_34', type:'fill', score:1, text:'34. 属于老子思想的有', answer:'ACD'},
-        {id:'zwh3_35', type:'fill', score:1, text:'35. 故宫三大殿', answer:'ABD'},
-        {id:'zwh3_36', type:'fill', score:1, text:'36. 属于"五经"的有', answer:'ACE'},
-        {id:'zwh3_37', type:'fill', score:1, text:'37. 关于"庙"正确的有', answer:'ABCD'},
-        {id:'zwh3_38', type:'fill', score:1, text:'38. 唐三宫包括', answer:'BDE'},
-        {id:'zwh3_39', type:'fill', score:1, text:'39. 含"四君子"的人物', answer:'BD'},
-        {id:'zwh3_40', type:'fill', score:1, text:'40. 关于禅宗不正确的有', answer:'ACD'},
-        {id:'zwh3_41', type:'fill', score:1, text:'41. 摊丁入亩', answer:'雍正把丁税摊入田赋'},
-        {id:'zwh3_42', type:'fill', score:1, text:'42. 颜肥柳瘦', answer:'颜体肥柳体瘦'},
-        {id:'zwh3_43', type:'fill', score:1, text:'43. 经史子集', answer:'图书四分法'},
-      ]},
+      {id:'ica_2025', name:'ICA 2025年试题', icon:'🗓️', summary:'ICA 2025年试题 · 65题', questions:[
+        {id:'i2025_1',type:'choice',score:1,text:'纠正学生发音时哪种方式最符合尊重原则？',answer:'B',options:["A.公开点名批评","B.私下温和提示","C.让学生模仿错误","D.夸张肢体语言"]},
+        {id:'i2025_2',type:'choice',score:1,text:'哪种动物类活动最有利于低龄学习者？',answer:'B',options:["A.翻译五种表达","B.图片排序游戏","C.造句十句","D.角色扮演"]},
+        {id:'i2025_3',type:'choice',score:1,text:'根据任务型教学法，哪个不属于"前任务"？',answer:'B',options:["A.展示城市地图","B.布置小组任务","C.讨论所需词汇","D.提供语法讲解"]},
+        {id:'i2025_4',type:'choice',score:1,text:'处理课堂突发状况时教师应优先？',answer:'C',options:["A.立即制止批评","B.等待自行和解","C.询问原因引导","D.转移注意力"]},
+        {id:'i2025_5',type:'choice',score:1,text:'根据《国家通用语言文字法》，哪种不恰当？',answer:'D',options:["A.规范使用简化字","B.学习汉字演变","C.尊重地方用语","D.要求掌握所有异体字"]},
+        {id:'i2025_6',type:'choice',score:1,text:'教授"把"字句时哪种最能体现语用功能？',answer:'B',options:["A.默写十句","B.情境描述打扫房间","C.比较句式区别","D.记忆固定搭配"]},
+        {id:'i2025_7',type:'choice',score:1,text:'对声调掌握影响最大的因素是？',answer:'C',options:["A.母语相似度","B.起始年龄","C.输入频率清晰度","D.是否学音乐"]},
+        {id:'i2025_8',type:'choice',score:1,text:'评估口语流利度最符合的指标是？',answer:'D',options:["A.拼写错误","B.语速200字/分","C.声调错误百分比","D.逻辑连贯性"]},
+        {id:'i2025_9',type:'choice',score:1,text:'最能体现"文化对比分析法"的做法？',answer:'A',options:["A.对比红包与赠礼","B.播放春晚","C.讨论过马路","D.提供百科全书"]},
+        {id:'i2025_10',type:'choice',score:1,text:'根据组块理论，哪种最有利于短时记忆？',answer:'B',options:["A.每次教一个新词","B.同义反义词汇链","C.死记硬背释义","D.写小短文"]},
+        {id:'i2025_11',type:'choice',score:1,text:'处理"中式英语"时最符合跨文化教学的态度？',answer:'B',options:["A.严厉纠正","B.理解引导","C.告知不礼貌","D.忽略语法错误"]},
+        {id:'i2025_12',type:'choice',score:1,text:'根据交际教学法，最能体现"意义优先"的活动？',answer:'C',options:["A.跟读","B.用过去时回答","C.角色扮演点餐","D.讲解语义做选择"]},
+        {id:'i2025_13',type:'choice',score:1,text:'分析"林"字时最能激发兴趣的解释？',answer:'C',options:["A.给出拼音翻译","B.讲解部首笔顺","C.引导思考两树木=多","D.背古诗词"]},
+        {id:'i2025_14',type:'choice',score:1,text:'根据动机理论，最有利于培养内在动机？',answer:'C',options:["A.高难度限时","B.奖励挂钩","C.真实交际情境","D.强调国际重要"]},
+        {id:'i2025_15',type:'choice',score:1,text:'根据情感过滤假说，对习得影响最大的是？',answer:'D',options:["A.语法分析能力","B.母语掌握","C.输入数量","D.焦虑自信心"]},
+        {id:'i2025_16',type:'choice',score:1,text:'教授"时+体"标记时哪种对比最有助于理解？',answer:'C',options:["A.列出搭配规则","B.对比英语","C.中文情境对比","D.做翻译练习"]},
+        {id:'i2025_17',type:'choice',score:1,text:'设计美食文化单元哪个最符合任务型教学？',answer:'B',options:["A.讲解八大菜系","B.分组做菜写食谱","C.阅读筷子礼仪","D.播放纪录片"]},
+        {id:'i2025_18',type:'choice',score:1,text:'根据HSK词汇大纲，哪个等级划分最符合常用度？',answer:'C',options:["A.尴尬4饕餮3","B.咖啡2博客5","C.手机1快递4","D.漂亮3优雅6"]},
+        {id:'i2025_19',type:'choice',score:1,text:'处理沉默现象时哪种做法符合教师话语管理？',answer:'B',options:["A.提高音量重复","B.增加互动活动","C.直接批评要求发言","D.给予准备时间"]},
+        {id:'i2025_20',type:'choice',score:1,text:'多媒体课件哪种设计最有利于提高效率？',answer:'C',options:["A.每页大量文字","B.全英文界面","C.图文并茂标注","D.优先动画"]},
+        {id:'i2025_21',type:'multi',score:2,text:'根据ICA标准，合格教师应具备哪些核心能力？',answer:["A","B","C","D"],options:["A.二语教学法","B.分析学习难点","C.专业知识","D.跨文化能力","E.多媒体操作"]},
+        {id:'i2025_22',type:'multi',score:2,text:'教授口语时哪些因素可能影响流利度？',answer:["A","B","C"],options:["A.母语语速","B.声母韵母难度","C.输入输出比","D.汉字形声字","E.使用频率"]},
+        {id:'i2025_23',type:'multi',score:2,text:'根据认知风格，哪些学习者需要更多视觉辅助？',answer:["A","C"],options:["A.场依存型","B.整体型","C.具体型","D.分析型","E.动觉型"]},
+        {id:'i2025_24',type:'multi',score:2,text:'设计节日文化时哪些做法有助于理解文化内涵？',answer:["A","C","D"],options:["A.制作手工","B.英文介绍","C.讲解演变","D.邀请分享","E.背诗词"]},
+        {id:'i2025_25',type:'multi',score:2,text:'哪些体现"意义协商"过程？',answer:["A","B","C","D","E"],options:["A.手势表达","B.澄清式提问","C.重复重音","D.释义反馈","E.请求解释"]},
+        {id:'i2025_26',type:'multi',score:2,text:'分析"学"字的字理时哪些体现象形+会意？',answer:["A","B","C"],options:["A."子"代表儿童","B.模拟读书场景","C.本义儿童在屋中读书","D.字形演变","E.说文解字"]},
+        {id:'i2025_27',type:'multi',score:2,text:'哪些因素可能提高情感过滤水平？',answer:["A","C"],options:["A.考试焦虑","B.鼓励氛围","C.过度自我监控","D.丰富输入","E.文化兴趣"]},
+        {id:'i2025_28',type:'multi',score:2,text:'教授可能补语时哪些策略有效？',answer:["A","B","D"],options:["A.正误对比","B.真实语境","C.与can绝对对应","D.描述能力","E.否定形式"]},
+        {id:'i2025_29',type:'multi',score:2,text:'一个好任务应具备哪些特征？',answer:["A","B","C","D","E"],options:["A.目标明确","B.真实交际","C.可理解输入","D.语言结果","E.略高于水平"]},
+        {id:'i2025_30',type:'multi',score:2,text:'哪些体现了形成性评估？',answer:["B","C","D"],options:["A.期中考试","B.课堂纠正","C.口头反馈","D.调整进度","E.期末检测"]},
+        {id:'i2025_31',type:'judge',score:1,text:'教师必须使用标准普通话不得夹杂方言。',answer:'×'},
+        {id:'i2025_32',type:'judge',score:1,text:'认知负荷理论认为信息越多效果越好。',answer:'×'},
+        {id:'i2025_33',type:'judge',score:1,text:'文化教学必须以中国官方立场为唯一标准。',answer:'×'},
+        {id:'i2025_34',type:'judge',score:1,text:'外在动机比内在动机更能促进长期发展。',answer:'×'},
+        {id:'i2025_35',type:'judge',score:1,text:'汉语"你"和英语"I"在指代对象上完全等价。',answer:'×'},
+        {id:'i2025_36',type:'judge',score:1,text:'HSK三级学习者必须掌握600个常用汉字。',answer:'√'},
+        {id:'i2025_37',type:'judge',score:1,text:'教授语法时应先讲规则再进行情境练习。',answer:'×'},
+        {id:'i2025_38',type:'judge',score:1,text:'文化教学目标是让学习者完全认同中国文化。',answer:'×'},
+        {id:'i2025_39',type:'judge',score:1,text:'交际教学法中教师角色是知识权威。',answer:'×'},
+        {id:'i2025_40',type:'judge',score:1,text:'根据习得顺序，学习者会先掌握"是"字句。',answer:'×'},
+        {id:'i2025_41',type:'judge',score:1,text:'任务前阶段不需要语言输入铺垫。',answer:'×'},
+        {id:'i2025_42',type:'judge',score:1,text:'处理中式英语可忽略母语背景影响。',answer:'×'},
+        {id:'i2025_43',type:'judge',score:1,text:'焦虑越高习得效果越好。',answer:'×'},
+        {id:'i2025_44',type:'judge',score:1,text:'整体性学习者适合通过大量例句学语法。',answer:'√'},
+        {id:'i2025_45',type:'judge',score:1,text:'所有汉字的字理解释须符合《说文解字》。',answer:'×'},
+        {id:'i2025_46',type:'judge',score:1,text:'交际教学法所有活动须模拟真实情境。',answer:'×'},
+        {id:'i2025_47',type:'judge',score:1,text:'根据习得顺序，学习者会先掌握"我"字句。',answer:'√'},
+        {id:'i2025_48',type:'judge',score:1,text:'动机越强学习投入时间越多。',answer:'√'},
+        {id:'i2025_49',type:'judge',score:1,text:'汉语"做"和英语"do"在任何语境可互换。',answer:'×'},
+        {id:'i2025_50',type:'judge',score:1,text:'形成性评估侧重评价最终成果。',answer:'×'},
+        {id:'i2025_51',type:'fill',score:1,text:'合格教师应具备______、______和______三维度专业能力。',answer:'专业知识；教学能力；职业素养'},
+        {id:'i2025_52',type:'fill',score:1,text:'教授口语策略有______、______和______。',answer:'模仿跟读；角色扮演；游戏竞赛'},
+        {id:'i2025_53',type:'fill',score:1,text:'教师的______和______能降低焦虑水平。',answer:'鼓励性评价；课堂互动'},
+        {id:'i2025_54',type:'fill',score:1,text:'汉字"水"体现了______造字法。',answer:'象形'},
+        {id:'i2025_55',type:'fill',score:1,text:'任务设计包括______、______和______三个阶段。',answer:'前任务；任务环；后任务'},
+        {id:'i2025_56',type:'fill',score:1,text:'交际教学法应遵循______、______和______原则。',answer:'交际性；真实性；参与性'},
+        {id:'i2025_57',type:'fill',score:1,text:'教师的______和______是激发内在动机途径。',answer:'积极反馈；目标设定'},
+        {id:'i2025_58',type:'fill',score:1,text:'汉语"______"和英语"I"语法功能不对等。',answer:'你'},
+        {id:'i2025_59',type:'fill',score:1,text:'HSK二级学习者须掌握______个汉字。',answer:'300'},
+        {id:'i2025_60',type:'fill',score:1,text:'______型学习者关注外部环境信息。',answer:'场依存'},
+        {id:'i2025_61',type:'shortAnswer',score:5,text:'简述处理违纪行为的基本原则。',answer:'①尊重人格②公平统一③私下沟通④预防为主⑤差异化策略。'},
+        {id:'i2025_62',type:'shortAnswer',score:5,text:'设计"请求帮助"功能的口语练习活动。',answer:'情境：需维修/借书。任务：用汉语请求（麻烦帮我修一下/可以借我吗）。角色：求助者与服务者。重点词：请、麻烦、能不能。'},
+        {id:'i2025_63',type:'shortAnswer',score:5,text:'如何通过积极情感环境促进语言学习？',answer:'①安全氛围②及时鼓励③良好关系④适中任务⑤文化共鸣。'},
+        {id:'i2025_64',type:'shortAnswer',score:5,text:'教授结果补语的直观和对比方法。',answer:'直观：图片展示状态变化。对比：吃饱了vs吃饱。情境：聚餐场景描述。'},
+        {id:'i2025_65',type:'shortAnswer',score:5,text:'设计节日主题单元如何平衡文化与语言？',answer:'①语言点嵌入节日②任务驱动③文化输入④互动体验⑤多元评估。'}
+      ]}
     ]
-  };
-  BANK.subjects.push(examSubject);
-})();
-
-// ======== 模拟考试（第5大板块） ========
-
-// 模拟考试状态
-const MK = {
-  questions: [],       // 所有题目
-  answers: {},         // 用户答案 {id: value}
-  qIdx: 0,            // 当前题目索引
-  timer: null,        // 计时器句柄
-  timeLeft: 6000,     // 剩余秒数 (100分钟 = 6000秒)
-  started: false,
-  usedIds: new Set()  // 已用过的题目ID
-};
-
-// 各科章节知识点摘要（用于生成新题型）
-const MK_KNOWLEDGE = {
-  xh: [
-    '普通话共同语标准：北京语音为标准音，北方话为基础方言，典范白话文著作为语法规范',
-    '七大方言：北方、吴、湘、赣、客家、闽、粤',
-    '语音四要素：音高、音强、音长、音色；音高区别意义最重要',
-    '声母21个，韵母39个；四呼：开口、齐齿、合口、撮口',
-    '前鼻音韵母8个，后鼻音韵母8个；韵尾只能由n、ng充当',
-    '汉字演变：甲骨文→金文→篆书→隶书→楷书；隶书是古今分水岭',
-    '六书：象形、指事、会意、形声、转注、假借',
-    '语素是最小的音义结合体；词是最小的能独立运用的语言单位',
-    '合成词结构：并列、偏正、动宾、主谓、补充',
-    '词类划分主要依据语法功能；实词：名动形数量代；虚词：副介连助叹',
-    '兼语句：使令义动词+宾语+宾语的动作；把字句表处置；被字句表被动',
-    '补语类型：结果、趋向、可能、状态、程度、数量、时量、动量',
-    '句子语气类型：陈述、疑问、祈使、感叹',
-    '修辞：比喻、拟人、夸张、排比、对偶、反复、设问、反问'
-  ],
-  wh: [
-    '中国国土约1000余万平方公里，三级阶梯地形',
-    '七大古都：安阳、西安、洛阳、开封、南京、杭州、北京',
-    '五岳：东岳泰山、西岳华山、南岳衡山、北岳恒山、中岳嵩山',
-    '丝绸之路由李希霍芬命名；最早开通者为张骞',
-    '四大发明：造纸术、印刷术、火药、指南针',
-    '儒家核心：仁、义、礼、智、信；四书五经',
-    '道家：老子《道德经》、庄子；道教：张道陵创五斗米道',
-    '佛教分大乘小乘，禅宗六祖慧能；第一寺院白马寺',
-    '科举三级：乡试、会试、殿试；三甲：状元、榜眼、探花',
-    '京剧四大名旦：梅兰芳、程砚秋、尚小云、荀慧生',
-    '中医四诊：望、闻、问、切；《黄帝内经》《伤寒论》',
-    '四大石窟：敦煌、云冈、龙门、麦积山',
-    '书法四大家：颜柳欧赵；《兰亭序》天下第一行书',
-    '文房四宝：宣纸、徽墨、端砚、湖笔',
-    '中国传统节日：春节、元宵、清明、端午、七夕、中秋、重阳、腊八',
-    '四大菜系：鲁、川、粤、淮扬',
-    '经史子集四分法；《永乐大典》最大类书；《资治通鉴》最大编年体',
-    '中国世界遗产：长城、故宫、兵马俑等；双遗产：泰山、黄山、峨眉山'
-  ],
-  ll: [
-    '对外汉语教学根本目的：培养运用汉语进行交际的能力',
-    '四大教学环节：总体设计→教材编写→课堂教学→测试',
-    '第二语言教学中心环节：课堂教学；中心由教师转向学生',
-    '中介语理论：塞林克提出，介于母语和目的语之间的动态系统',
-    '偏误分析：系统性规律性错误；对比分析预测难点',
-    '教学法流派：语法翻译法（母语授课）、直接法（目的语）、听说法（句型操练）、功能法（交际）',
-    '任务教学法：以学生为中心，完成任务为途径',
-    '教材编写五原则：针对性、实用性、科学性、趣味性、系统性',
-    '四大测试类型：水平测试、成绩测试、诊断测试、潜能测试',
-    'HSK：汉语水平考试，标准化水平测试',
-    '语言习得机制：乔姆斯基提出LAD先天论',
-    '文化适应：蜜月期→挫折期→调整期→适应期；文化休克',
-    '正迁移/负迁移：一语对二语的促进/阻碍作用',
-    '语音教学：先声母后韵母；声调靠模仿和记忆',
-    '词汇教学：语素法、搭配法、语境法、对比法',
-    '汉字教学：先认读后书写，先简单后复杂'
-  ]
-};
-
-// 获取科目可用题目池
-function getSubjectPool(subjIdx) {
-  const pool = [];
-  BANK.subjects[subjIdx].chapters.forEach(ch => {
-    ch.questions.forEach(q => {
-      // 深拷贝，不要影响原始数据
-      pool.push(JSON.parse(JSON.stringify(q)));
-    });
   });
-  // 也加入历年真题（第4个科目）中对应科目的题目
-  if (BANK.subjects.length > 3) {
-    const examSubj = BANK.subjects[3];
-    const subjName = BANK.subjects[subjIdx].name;
-    examSubj.chapters.forEach(ch => {
-      if (ch.name.includes(subjName)) {
-        ch.questions.forEach(q => {
-          pool.push(JSON.parse(JSON.stringify(q)));
-        });
-      }
-    });
-  }
-  return pool;
-}
-
-// 从池中随机抽题（避开已用ID）
-function pickQuestions(pool, count, usedIds) {
-  const available = pool.filter(q => !usedIds.has(q.id));
-  const source = available.length >= count ? available : pool; // 不够就复用
-  shuffle(source);
-  const picked = source.slice(0, count);
-  picked.forEach(q => usedIds.add(q.id));
-  return picked;
-}
-
-// 生成改错题
-function genCorrection(count, usedIds) {
-  const corrections = [
-    {text:'"他很高"和"他是高"都正确', answer:'"他是高"错误，应为"他很高"，形容词谓语句不需"是"'},
-    {text:'"我帮忙他"是正确表达', answer:'错误，"帮忙"是不及物动词，应为"我帮助他"或"我帮他忙"'},
-    {text:'"我比他高"也可以说"我高比他"', answer:'错误，比较句应为"A比B+形容词"，不能说"我高比他"'},
-    {text:'"因为下雨，所以我不去"中的"因为…所以…"使用错误', answer:'用法正确，这是因果复句的标准用法'},
-    {text:'"把"字句中"我把饭吃"是正确的', answer:'错误，把字句的动词不能是光杆动词，应为"我把饭吃了"'},
-    {text:'"被"字句中"他被表扬"是正确的', answer:'较少用，通常说"他受到了表扬"，被字句动词最好带其他成分'},
-    {text:'"我去过北京"中的"过"表示动作已完成', answer:'正确，"过"表示曾经经历'},
-    {text:'"我吃饭了"和"我吃了饭"意思完全相同', answer:'不完全相同，"我吃饭了"强调动作完成，"我吃了饭"强调宾语'},
-    {text:'"她比我很漂亮"语法正确', answer:'错误，比较句程度副词位置是"她比我漂亮很多"'},
-    {text:'"不但…而且…"表示转折关系', answer:'错误，表示递进关系'},
-    {text:'"连…都…"表示强调', answer:'正确，"连…都…"是强调句式'},
-    {text:'存现句"墙上挂着一幅画"中的"着"表示动作正在进行', answer:'错误，"着"在此表示状态的持续'},
-    {text:'"我学汉语三年了"中的时间状语位置正确', answer:'正确，时间段放在动词后'},
-    {text:'"快进来吧"中的"进来"是趋向补语', answer:'正确，"进来"表示动作趋向'},
-    {text:'"你吃得完吗"表示可能补语', answer:'正确，"得/不了"结构表示可能补语'},
-    {text:'"他把作业做完了"中"把"的作用是提前宾语表示处置', answer:'正确，这是把字句的主要功能'},
-    {text:'"我觉得他是对的"是兼语句', answer:'错误，"觉得"是心理动词，后面是小句宾语'},
-    {text:'"老师让学生回答问题"是兼语句', answer:'正确，"让"是使令动词，构成兼语句'},
+})();// ======== 模拟考试（ICA模式·8种题型）=======
+// 题型生成函数
+function genCorrection(count) {
+  var c = [
+    {text:'判断正误并改正："他很高"和"他是高"都正确。', answer:'"他是高"错误，应为"他很高"，形容词谓语句不需"是"'},
+    {text:'判断正误并改正："我帮忙他"是正确表达。', answer:'错误，"帮忙"不及物，应为"我帮助他"或"我帮他忙"'},
+    {text:'判断正误并改正："我比他高"也可以说"我高比他"。', answer:'错误，比较句应为"A比B+形容词"'},
+    {text:'判断正误并改正：把字句中"我把饭吃"是正确的。', answer:'错误，把字句动词不能是光杆动词，应为"我把饭吃了"'},
+    {text:'判断正误并改正："不但…而且…"表示转折关系。', answer:'错误，表示递进关系'},
+    {text:'判断正误并改正："我学汉语三年了"的语序正确。', answer:'正确'},
+    {text:'判断正误并改正："快进来吧"中的"进来"是趋向补语。', answer:'正确'},
+    {text:'判断正误并改正："我觉得他是对的"是兼语句。', answer:'错误，"觉得"是心理动词，后是小句宾语'},
+    {text:'判断正误并改正："老师让学生回答问题"是兼语句。', answer:'正确，"让"使令动词，构成兼语句'},
+    {text:'判断正误并改正："她比我很漂亮"语法正确。', answer:'错误，应为"她比我漂亮很多"'},
   ];
-  shuffle(corrections);
-  const picked = [];
-  for (let i = 0; i < count && i < corrections.length; i++) {
-    const id = 'mk_corr_' + i + '_' + Date.now();
-    picked.push({id, type:'correction', score:2, text:corrections[i].text, answer:corrections[i].answer});
-    usedIds.add(id);
-  }
-  return picked;
+  shuffle(c); var r=[]; for(var i=0;i<count&&i<c.length;i++) r.push({id:'mk_cor_'+Date.now()+'_'+i,type:'correction',score:3,text:c[i].text,answer:c[i].answer}); return r;
 }
-
-// 生成分析题
-function genAnalysis(count, usedIds) {
-  const analyses = [
-    {text:'请分析"他把书放在桌子上"的句式特点及"把"的作用。', answer:'这是把字句。"把"将宾语"书"提到动词"放"前，表示对"书"的处置。结构：主语+把+宾语+动词+补语。动词后必须带其他成分（"在桌子上"是结果补语）。'},
-    {text:'请分析"老师让我回答问题"的句子结构。', answer:'这是兼语句。"让"是使令动词，"我"既是"让"的宾语，又是"回答问题"的主语（兼语）。结构：主语+使令动词+兼语+兼语的动作。'},
-    {text:'请分析"我比他高"和"我高比他"哪个正确并说明理由。', answer:'正确表达为"我比他高"。比较句格式为"A比B+形容词"，不能用"A形容词比B"。当有程度副词时，应为"A比B+形容词+很多/一点儿"。'},
-    {text:'请分析"下雨了"和"雨下了"的区别。', answer:'"下雨了"是存现句/自然现象句，"雨"是宾语；"雨下了"是主谓句，"雨"是主语。"下雨了"强调现象发生，"雨下了"强调主语"雨"的行为。'},
-    {text:'请分析普通话声调的作用并举例说明。', answer:'声调是区别意义的重要手段。"妈(mā)"、"麻(má)"、"马(mǎ)"、"骂(mà)"四个字声韵母相同，仅靠声调区别意义。普通话四个声调：阴平55、阳平35、上声214、去声51。'},
-    {text:'请分析成语"一举两得"的构词方式。', answer:'"一举两得"是紧缩结构。"一"修饰"举"（状语），"两"修饰"得"（状语）。整体意为做一个动作获得两种好处，是固定短语（成语）。'},
-    {text:'请分析"请坐"和"你坐"在语法上的区别。', answer:'"请坐"是祈使句，隐含主语"你/您"，"请"表示礼貌请求。"你坐"是主谓句的陈述句，描述事实。两者语气不同。'},
-    {text:'请分析汉字"休"的造字法。', answer:'"休"是会意字。由"人"和"木"组成，人靠在树旁休息，通过两个部件的意义合成新义"休息"。'},
-    {text:'请分析"学习汉语"和"汉语学习"在结构上的区别。', answer:'"学习汉语"是动宾结构，"学习"是动词谓语，"汉语"是宾语。"汉语学习"是偏正结构，"汉语"修饰"学习"，表示学习的内容范畴，可作主语或宾语。'},
-    {text:'请分析"一点儿"和"有一点儿"的用法区别。', answer:'"一点儿"常用于否定："一点儿也不累"；也用在名词前："一点儿水"。"有一点儿"常用于形容词前表示程度不高："有一点儿累"，略带否定色彩。'},
+function genAnalysis(count) {
+  var a = [
+    {text:'请分析"他把书放在桌子上"的句式特点及"把"的作用。', answer:'把字句，表处置。结构：主语+把+宾语+动词+补语'},
+    {text:'请分析"老师让我回答问题"的句子结构。', answer:'兼语句。"我"同时作"让"的宾语和"回答问题"的主语'},
+    {text:'请分析"下雨了"和"雨下了"的区别。', answer:'"下雨了"是存现句；"雨下了"是主谓句'},
+    {text:'请分析普通话声调的作用并举例。', answer:'区别意义，如妈mā麻má马mǎ骂mà'},
+    {text:'请分析汉字"休"的造字法。', answer:'会意字，"人"+"木"，人靠树旁休息'},
+    {text:'请分析"学习汉语"和"汉语学习"的结构区别。', answer:'"学习汉语"是动宾，"汉语学习"是偏正'},
   ];
-  shuffle(analyses);
-  const picked = [];
-  for (let i = 0; i < count && i < analyses.length; i++) {
-    const id = 'mk_ana_' + i + '_' + Date.now();
-    picked.push({id, type:'analysis', score:Math.round(10/count*10)/10, text:analyses[i].text, answer:analyses[i].answer});
-    usedIds.add(id);
-  }
-  return picked;
+  shuffle(a); var r=[]; for(var i=0;i<count&&i<a.length;i++) r.push({id:'mk_ana_'+Date.now()+'_'+i,type:'analysis',score:5,text:a[i].text,answer:a[i].answer}); return r;
 }
-
-// 生成简答题
-function genShortAnswer(count, subject, usedIds) {
-  const saPool = {
-    xh: [
-      {text:'简述现代汉语的特点。', answer:'语音：无声调辨义，音节界限分明；词汇：双音节词占优势，广泛运用词根复合法；语法：语序和虚词是主要语法手段，量词丰富。'},
-      {text:'简述补语的类型及举例。', answer:'结果补语（做完）、趋向补语（进来）、可能补语（吃得完）、程度补语（好极了）、状态补语（跑得快）、数量补语（去三次）、时量补语（学三年）、动量补语（打一下）。'},
-      {text:'简述把字句的结构特点。', answer:'主语+把+宾语+动词+其他成分。动词不能是光杆动词，需带补语、宾语或"了"。宾语是定指的、已知的。"把"将宾语提到动词前，表示处置。'},
-      {text:'简述汉字的造字法（六书）。', answer:'象形（画物象形如"日"）、指事（符号表意如"上"）、会意（组合表意如"休"）、形声（形旁表义声旁表音如"河"）、转注（同义互训）、假借（借音表义）。'},
-      {text:'简述词义演变的三种类型。', answer:'词义扩大（"河"从专指黄河→泛指河流）、词义缩小（"臭"从泛指气味→专指臭味）、词义转移（"走"从跑→行走）。'},
-    ],
-    wh: [
-      {text:'简述科举制度的三级考试。', answer:'乡试（省城，考中为举人，第一名称解元）、会试（礼部，考中为贡士，第一名称会元）、殿试（皇帝主持，考中为进士，一甲前三名状元榜眼探花）。'},
-      {text:'简述四书五经的构成。', answer:'四书：《大学》《中庸》《论语》《孟子》；五经：《诗经》《尚书》《礼记》《周易》《春秋》。'},
-      {text:'简述佛教传入中国的主要汉化表现。', answer:'与儒道融合；禅宗是佛教中国化的代表；佛经翻译吸收了本土概念；寺院建筑融合中国风格；佛教节日与民俗结合。'},
-      {text:'简述中国四大发明及其影响。', answer:'造纸术（蔡伦）促进文化传播；印刷术（毕昇）推动知识普及；火药改变军事格局；指南针促进航海和地理发现。'},
-    ],
-    ll: [
-      {text:'简述对外汉语教学中"文化休克"现象及应对。', answer:'文化休克指对目的语文化不适应而产生的深度焦虑感。四个阶段：蜜月期→挫折期→调整期→适应期。应对：加强文化教学，培养跨文化交际意识。'},
-      {text:'简述任务教学法的核心特点。', answer:'以学生为中心；以完成实际交际任务为教学途径；任务有明确目标；在完成任务的过程中自然地使用语言；强调"做中学"。'},
-    ],
+function genShortAnswer(count, subj) {
+  var pool = {
+    xh:[{text:'简述现代汉语的特点。',answer:'语音无声调辨义；词汇双音节占优势；语法语序和虚词为主要手段'},{text:'简述补语的类型及举例。',answer:'结果(做完)、趋向(进来)、可能(吃得完)、程度(好极了)、状态(跑得快)、数量(去三次)'},{text:'简述把字句的结构特点。',answer:'主语+把+宾语+动词+其他成分，动词不能是光杆动词'}],
+    wh:[{text:'简述科举制度的三级考试。',answer:'乡试(举人)、会试(贡士)、殿试(进士)'},{text:'简述四书五经的构成。',answer:'四书：大学中庸论语孟子；五经：诗书礼易春秋'},{text:'简述四大发明及其影响。',answer:'造纸术、印刷术、火药、指南针'}],
+    ll:[{text:'简述"文化休克"现象及应对。',answer:'对文化不适应的焦虑感，四阶段：蜜月→挫折→调整→适应'},{text:'简述任务教学法的核心特点。',answer:'以学生为中心，以完成任务为途径，强调做中学'}]
   };
-  const pool = saPool[subject] || saPool.xh;
-  shuffle(pool);
-  const picked = [];
-  for (let i = 0; i < count && i < pool.length; i++) {
-    const id = 'mk_sa_' + subject + '_' + i + '_' + Date.now();
-    const score = subject === 'll' ? 5 : Math.round(10/count*10)/10;
-    picked.push({id, type:'shortAnswer', score, text:pool[i].text, answer:pool[i].answer});
-    usedIds.add(id);
-  }
-  return picked;
+  var p = pool[subj]||pool.xh; shuffle(p); var r=[];
+  for(var i=0;i<count&&i<p.length;i++) r.push({id:'mk_sa_'+Date.now()+'_'+i,type:'shortAnswer',score:5,text:p[i].text,answer:p[i].answer}); return r;
 }
-
-// 生成名词解释
-function genTerm(count, subject, usedIds) {
-  const termPool = {
-    wh: [
-      {text:'请解释"丝绸之路"', answer:'公元前2世纪张骞出使西域后形成的连接中国与中亚、欧洲的商贸路线。以丝绸贸易闻名，由德国地理学家李希霍芬命名。'},
-      {text:'请解释"科举制度"', answer:'隋唐至清末的选拔官员考试制度。分乡试、会试、殿试三级。打破了门阀垄断，促进了社会流动。1905年废除。'},
-      {text:'请解释"百家争鸣"', answer:'春秋战国时期各学派自由争论的学术繁荣局面。主要流派有儒、墨、道、法、名、阴阳、纵横、杂等。影响了中国两千多年的思想发展。'},
-      {text:'请解释"封禅"', answer:'古代帝王在泰山举行的祭祀天地的仪式。泰山封禅是最隆重的祭天仪式。历史上秦始皇、汉武帝、唐玄宗、宋真宗等曾举行。'},
-      {text:'请解释"四书五经"', answer:'儒家核心经典。四书：《大学》《中庸》《论语》《孟子》；五经：《诗经》《尚书》《礼记》《周易》《春秋》。宋代朱熹编定四书。'},
-      {text:'请解释"禅宗"', answer:'佛教中国化的重要宗派。达摩为祖师，传至六祖慧能发扬光大。主张"不立文字，直指人心，见性成佛"。对后世哲学和艺术影响深远。'},
-      {text:'请解释"京剧"', answer:'中国国粹，形成于清代。四大行当：生旦净丑。四大名旦：梅兰芳、程砚秋、尚小云、荀慧生。表演手段：唱念做打。'},
-      {text:'请解释"唐诗宋词"', answer:'唐代诗歌和宋代词作是中国文学的两座高峰。代表诗人：李白、杜甫、白居易。代表词人：苏轼、李清照、辛弃疾。'},
-    ],
-    ll: [
-      {text:'请解释"中介语"', answer:'第二语言学习者形成的介于母语和目的语之间的动态语言系统。由塞林克提出。具有系统性、可渗透性和动态性特点。'},
-      {text:'请解释"偏误分析"', answer:'对第二语言学习者的系统性错误进行分析的方法。强调偏误的规律性，与偶然的失误不同。有助于教师了解学习难点，改进教学。'},
-      {text:'请解释"文化休克"', answer:'对目的语文化环境不适应而产生的深度焦虑感。表现为沮丧、孤独、思乡等。四个阶段：蜜月期、挫折期、调整期、适应期。'},
-      {text:'请解释"任务教学法"', answer:'以学生为中心，以完成实际交际任务为教学途径的教学方法。强调在真实或模拟场景中使用语言，培养交际能力。'},
-      {text:'请解释"语言习得机制(LAD)"', answer:'乔姆斯基提出的先天语言能力理论。认为人类大脑有先天的语言习得装置，能够从有限的语言输入中归纳出语法规则。'},
-      {text:'请解释"对比分析"', answer:'通过对比两种语言的差异来预测学习难点的方法。认为差异越大，学习难度越大。有助于确定教学重点。'},
-    ],
-  };
-  const pool = termPool[subject] || termPool.wh;
-  shuffle(pool);
-  const picked = [];
-  for (let i = 0; i < count && i < pool.length; i++) {
-    const id = 'mk_term_' + subject + '_' + i + '_' + Date.now();
-    picked.push({id, type:'term', score:Math.round(10/count*10)/10, text:pool[i].text, answer:pool[i].answer});
-    usedIds.add(id);
-  }
-  return picked;
+function genTerm(count) {
+  var t = [
+    {text:'请解释"丝绸之路"。',answer:'连接中国与中亚欧洲的商贸路线，由李希霍芬命名'},
+    {text:'请解释"科举制度"。',answer:'隋唐至清末的选官考试制度，分乡试会试殿试三级'},
+    {text:'请解释"百家争鸣"。',answer:'春秋战国各学派自由争论的学术繁荣局面'},
+    {text:'请解释"中介语"。',answer:'二语学习者介于母语和目的语间的动态语言系统，塞林克提出'},
+    {text:'请解释"偏误分析"。',answer:'对二语学习者系统性错误的分析方法'},
+    {text:'请解释"文化休克"。',answer:'对目的语文化不适应的深度焦虑感'},
+    {text:'请解释"禅宗"。',answer:'佛教中国化宗派，主张不立文字直指人心'},
+    {text:'请解释"京剧"。',answer:'国粹，四大行当生旦净丑，四大名旦梅兰芳等'},
+  ];
+  shuffle(t); var r=[]; for(var i=0;i<count&&i<t.length;i++) r.push({id:'mk_term_'+Date.now()+'_'+i,type:'term',score:4,text:t[i].text,answer:t[i].answer}); return r;
 }
-
-// 生成多选题
-function genMultiChoice(count, usedIds) {
-  const multis = [
+function genLessonPlan() {
+  var s = [
+    {text:'你是一名初级汉语水平的留学生班教师。请设计一节45分钟的综合课教案，主题是"去餐厅吃饭"。包括点餐词汇和"我想/我要"句型。', answer:'教学对象：初级留学生\n课题：去餐厅吃饭\n课时：45分钟\n教学目标：掌握点餐词汇；学会用"我想+动词""我要+名词"\n环节：导入(5分)→词汇(10分)→句型(10分)→对话(10分)→总结(5分)→活动(5分)'},
+    {text:'你是一名中级汉语水平的留学生班教师。请设计一节45分钟的综合课教案，主题是"我的爱好"。', answer:'教学对象：中级留学生\n课题：我的爱好\n课时：45分钟\n环节：导入(3分)→词汇(7分)→句型(10分)→小组(15分)→展示(7分)→总结(3分)'},
+    {text:'请为零起点小学生（8-10岁）设计一节30分钟的课，主题"数字1-10"。', answer:'教学对象：零起点小学生\n课题：数字1-10\n课时：30分钟\n环节：热身(3分)→儿歌(7分)→游戏(10分)→巩固(5分)→小结(5分)'},
+  ];
+  shuffle(s); return [{id:'mk_plan_'+Date.now(),type:'lessonPlan',score:0,text:s[0].text,answer:s[0].answer}];
+}
+function genMultiChoice(count) {
+  var m = [
     {text:'以下哪些属于现代汉语七大方言？', options:['A.北方方言','B.吴方言','C.日方言','D.粤方言','E.闽方言'], answer:['A','B','D','E']},
     {text:'以下哪些是"五岳"中的山？', options:['A.泰山','B.华山','C.黄山','D.衡山','E.恒山'], answer:['A','B','D','E']},
     {text:'以下哪些属于儒家"四书"？', options:['A.《大学》','B.《中庸》','C.《论语》','D.《孟子》','E.《诗经》'], answer:['A','B','C','D']},
     {text:'以下哪些是中国四大发明？', options:['A.造纸术','B.火药','C.地动仪','D.印刷术','E.指南针'], answer:['A','B','D','E']},
-    {text:'以下哪些属于科举考试的三级？', options:['A.乡试','B.会试','C.殿试','D.院试','E.童试'], answer:['A','B','C']},
-    {text:'以下哪些属于汉语补语类型？', options:['A.结果补语','B.趋向补语','C.程度补语','D.主语补语','E.可能补语'], answer:['A','B','C','E']},
-    {text:'以下哪些属于对外汉语教学的教学环节？', options:['A.总体设计','B.教材编写','C.课堂教学','D.学生评估','E.测试'], answer:['A','B','C','E']},
-    {text:'以下哪些属于中国四大石窟？', options:['A.敦煌莫高窟','B.云冈石窟','C.龙门石窟','D.麦积山石窟','E.大足石刻'], answer:['A','B','C','D']},
+    {text:'以下哪些属于科举三级？', options:['A.乡试','B.会试','C.殿试','D.院试','E.童试'], answer:['A','B','C']},
+    {text:'以下哪些属于补语类型？', options:['A.结果补语','B.趋向补语','C.程度补语','D.主语补语','E.可能补语'], answer:['A','B','C','E']},
+    {text:'以下哪些属于教学环节？', options:['A.总体设计','B.教材编写','C.课堂教学','D.学生评估','E.测试'], answer:['A','B','C','E']},
+    {text:'以下哪些属于四大石窟？', options:['A.莫高窟','B.云冈石窟','C.龙门石窟','D.麦积山石窟','E.大足石刻'], answer:['A','B','C','D']},
     {text:'以下哪些属于教学法流派？', options:['A.语法翻译法','B.直接法','C.听说法','D.交际法','E.背诵法'], answer:['A','B','C','D']},
-    {text:'以下哪些是汉字造字法（六书）？', options:['A.象形','B.指事','C.会意','D.形声','E.笔画'], answer:['A','B','C','D']},
-    {text:'以下哪些是中国著名的书法家？', options:['A.王羲之','B.颜真卿','C.柳公权','D.欧阳询','E.李白'], answer:['A','B','C','D']},
-    {text:'以下哪些属于中国世界文化与自然双遗产？', options:['A.泰山','B.黄山','C.峨眉山-乐山大佛','D.长城','E.武夷山'], answer:['A','B','C','E']},
+    {text:'以下哪些是汉字造字法？', options:['A.象形','B.指事','C.会意','D.形声','E.笔画'], answer:['A','B','C','D']},
   ];
-  shuffle(multis);
-  const picked = [];
-  for (let i = 0; i < count && i < multis.length; i++) {
-    const id = 'mk_multi_' + i + '_' + Date.now();
-    picked.push({id, type:'multi', score:2, text:multis[i].text, options:multis[i].options, answer:multis[i].answer});
-    usedIds.add(id);
-  }
-  return picked;
+  shuffle(m); var r=[];
+  for(var i=0;i<count&&i<m.length;i++) r.push({id:'mk_multi_'+Date.now()+'_'+i,type:'multi',score:3,text:m[i].text,options:m[i].options,answer:m[i].answer}); return r;
 }
-
-// 生成教案题
-function genLessonPlan(usedIds) {
-  const scenarios = [
-    {
-      text:'你是一名为初级汉语水平（学完300词）的留学生班级的教师。请设计一节45分钟的综合课教案，主题是"去餐厅吃饭"。教学内容包括：点餐相关词汇和"我想……""我要……"句型。请写出完整的教案。',
-      answer:'教学对象：初级汉语水平留学生（词汇量约300）\n课题：去餐厅吃饭\n课时：45分钟\n教学目标：掌握5个点餐词汇（菜单、点菜、买单、筷子、味道）；学会用"我想+动词"、"我要+名词"表达需求。\n教学环节：\n一、导入（5分钟）：展示餐厅图片，问"你们去过中国餐厅吗？"\n二、词汇教学（10分钟）：用图片展示菜单、点菜、买单、筷子、味道，领读、齐读、个别读\n三、句型教学（10分钟）：板书"我想点菜""我要一碗米饭"，替换练习\n四、情景对话（10分钟）：两人一组，一人当服务员一人当顾客，用所学词汇和句型对话\n五、总结与作业（5分钟）：复习词汇和句型，布置去中国餐厅实践并记录\n六、课堂活动（5分钟）：角色扮演展示'
-    },
-    {
-      text:'你是一名中级汉语水平（学完800词）的留学生班级的教师。请设计一节45分钟的综合课教案，主题是"我的爱好"。要求学生能用"我喜欢……""我对……感兴趣""……是我的爱好"等多种表达法介绍自己的爱好，并能进行简单交流。',
-      answer:'教学对象：中级汉语水平留学生（词汇量约800）\n课题：我的爱好\n课时：45分钟\n教学目标：掌握爱好相关词汇（运动、音乐、旅行、阅读等）；学会多种表达爱好的方式；能进行2分钟的口语介绍。\n教学环节：\n一、导入（3分钟）：教师自我介绍爱好"我喜欢看书"→引起学生兴趣\n二、词汇扩展（7分钟）：分类呈现爱好词汇（运动类、艺术类、休闲类），图片配对练习\n三、句型教学（10分钟）："我喜欢……""我对……感兴趣""……是我的爱好"，三种表达法对比练习\n四、小组活动（15分钟）：两人一组互相采访爱好，然后向全班介绍同伴的爱好\n五、展示与点评（7分钟）：2-3组上台展示，教师点评纠错\n六、总结（3分钟）：回顾三种表达法，布置写一段话介绍自己的爱好'
-    },
-    {
-      text:'你是一名零起点汉语班的小学生（8-10岁）教师。请设计一节30分钟的课，主题是"数字1-10"。要求用游戏和儿歌的方式教学，保持趣味性。',
-      answer:'教学对象：零起点小学生（8-10岁）\n课题：数字1-10\n课时：30分钟\n教学目标：能听、说、认读数字1-10；能用数字简单计数。\n教学环节：\n一、热身（3分钟）：拍手歌，让学生放松\n二、数字儿歌教学（7分钟）：播放/教唱"一二三四五，上山打老虎"儿歌，配合手指动作\n三、游戏练习（10分钟）：\n  - 数字接龙：学生依次说数字\n  - 数字卡片配对：听到数字拿对应卡片\n  - 找朋友：数字和实物数量配对\n四、巩固（5分钟）：教师说数字，学生伸手指表示；学生互相出题\n五、小结（5分钟）：齐唱数字歌，布置课后数一数家里的东西'
-    },
-  ];
-  shuffle(scenarios);
-  const id = 'mk_plan_' + Date.now();
-  const picked = [{id, type:'lessonPlan', score:20, text:scenarios[0].text, answer:scenarios[0].answer}];
-  usedIds.add(id);
-  return picked;
-}
-
-// 渲染模拟考试入口页
+// 模拟考试主逻辑
+const MK = {questions:[],answers:{},qIdx:0,timer:null,timeLeft:6000,started:false};
 function renderMockStart() {
-  const area = document.getElementById('mk-start-area');
-  const icaCount = parseInt(localStorage.getItem(_k('mk_ica_count')) || '0');
-  const ctcCount = parseInt(localStorage.getItem(_k('mk_ctc_count')) || '0');
-  area.innerHTML =
-    '<div class="tac mt16">' +
-    '<div style="font-size:36px;margin-bottom:4px">🎯</div>' +
-    '<div class="fw6" style="font-size:18px">模拟考试</div>' +
-    '<div class="f13 cg mt4">请选择考试类型</div>' +
-    '</div>' +
-    '<div class="sc" onclick="startMockExam(\'ica\')" style="margin-top:16px;border-color:#4A7EC2">' +
-    '<div class="sc-top"><div class="sc-ico" style="background:#E3F2FD;font-size:22px">🌐</div><div class="sc-n" style="color:#1565C0">ICA 国际汉语教师资格考试</div></div>' +
-    '<div class="sc-d">三科合一 · 100分钟 · 150分满分 · 8种题型</div>' +
-    (icaCount > 0 ? '<div class="f12 cg mt4" style="margin-left:56px">已进行 ' + icaCount + ' 次模拟考试</div>' : '') +
-    '</div>' +
-    '<div class="sc" onclick="startMockExam(\'ctcsol\')" style="border-color:#E65100;background:#FFF8E1">' +
-    '<div class="sc-top"><div class="sc-ico" style="background:#FFF3E0;font-size:22px">📜</div><div class="sc-n" style="color:#E65100">CTCSOL 国际中文教师证书考试</div></div>' +
-    '<div class="sc-d">三模块合一 · 150分钟 · 150分满分 · 全客观题</div>' +
-    (ctcCount > 0 ? '<div class="f12 cg mt4" style="margin-left:56px">已进行 ' + ctcCount + ' 次模拟考试</div>' : '') +
-    '</div>' +
-    '<div class="card-info mt12">' +
-    '<div class="fw6 mb8">⏱️ 考试规则</div>' +
-    '<div class="f13" style="line-height:1.8">' +
-    '· 可提前手动交卷<br>' +
-    '· 交卷后显示每题答案及分数<br>' +
-    '· 每次进入全新出题，绝不重复' +
-    '</div></div>' +
-    '<div class="f12 cg tac mt8" style="padding-bottom:20px">CTCSOL 150题全客观 ｜ ICA约78题8种题型 · 全新随机出题</div>';
+  document.getElementById('mk-start-area').innerHTML =
+    '<div class="tac mt16"><div style="font-size:36px">🌐</div><div class="fw6" style="font-size:18px">模拟考试</div><div class="f13 cg mt4">ICA模式 · 100分钟 · 150分</div></div>' +
+    '<div class="sc" onclick="startMockExam()" style="margin-top:16px;border-color:#4A7EC2">' +
+    '<div class="sc-top"><div class="sc-ico" style="background:#E3F2FD;font-size:22px">🌐</div><div class="sc-n" style="color:#1565C0">开始ICA模拟考试</div></div>' +
+    '<div class="sc-d">现代汉语50分 · 中国文化50分 · 对外汉语50分</div>' +
+    '<div class="f12 cg mt4" style="margin-left:56px">8种题型随机出题 · 每次全新</div></div>' +
+    '<div class="card-info mt12"><div class="fw6 mb8">📋 题型分布</div><div class="f13" style="line-height:1.8">' +
+    '填空·单选·多选·判断·改错·分析·简答·名词解释·教案（9种）<br>' +
+    '⏱️ 100分钟 · 可提前交卷 · 客观题自动判分</div></div>';
 }
-
-// 开始模拟考试
-var MK_examType = ''; // 'ica' or 'ctcsol'
-function startMockExam(type) {
-  MK_examType = type;
-  // 清状态
-  MK.questions = [];
-  MK.answers = {};
-  MK.qIdx = 0;
-  MK.timeLeft = 6000; // 100分钟
-  MK.started = false;
-
-  // 设置考试标签和计时
-  var label = type === 'ica' ? 'ICA考试' : 'CTCSOL考试';
-  document.getElementById('mk-exam-type-label').textContent = label;
-  // 更新计时器显示
-  var mins = type === 'ctcsol' ? 150 : 100;
-  document.getElementById('mk-timer').textContent = (mins < 10 ? '0' : '') + mins + ':00';
-  if (type === 'ctcsol') {
-    document.getElementById('mk-timer').classList.remove('ok');
-  } else {
-    document.getElementById('mk-timer').classList.add('ok');
-  }
-
-  // 获取已用ID池（按考试类型隔离）
-  var usedKey = 'mk_' + type + '_used_ids';
-  let usedRaw = localStorage.getItem(_k(usedKey));
-  MK.usedIds = new Set(usedRaw ? JSON.parse(usedRaw) : []);
-  // 如果已用池超过总题数80%，重置
-  let totalQ = 0;
-  BANK.subjects.forEach(s => s.chapters.forEach(ch => totalQ += ch.questions.length));
-  if (MK.usedIds.size > totalQ * 0.8) {
-    MK.usedIds = new Set();
-  }
-
-  const allQuestions = [];
-
-  if (type === 'ctcsol') {
-    // ===== CTCSOL：全客观题（单选+多选），三大模块各50题 =====
-    MK.timeLeft = 9000; // 150分钟
-
-    // 模块① 基础知识50分：现代汉语+中国文化 →
-    const xhPool = getSubjectPool(0);
-    const whPool = getSubjectPool(1);
-    const basePool = xhPool.filter(q => q.type === 'choice').concat(whPool.filter(q => q.type === 'choice'));
-    const baseChoices = pickQuestions(basePool, 40, MK.usedIds);
-    baseChoices.forEach(q => { q.score = 1; q.subject = '基础知识'; q.section = '单选'; });
-    allQuestions.push(...baseChoices);
-    // 多选补充
-    const baseMultis = genMultiChoice(10, MK.usedIds);
-    baseMultis.forEach(q => { q.score = 1; q.subject = '基础知识'; q.section = '多选'; });
-    allQuestions.push(...baseMultis);
-
-    // 模块② 应用能力50分：对外汉语教学理论 →
-    const llPool = getSubjectPool(2);
-    const appChoices = pickQuestions(llPool.filter(q => q.type === 'choice'), 45, MK.usedIds);
-    appChoices.forEach(q => { q.score = 1; q.subject = '应用能力'; q.section = '单选'; });
-    allQuestions.push(...appChoices);
-    const appMultis = genMultiChoice(5, MK.usedIds);
-    appMultis.forEach(q => { q.score = 1; q.subject = '应用能力'; q.section = '多选'; });
-    allQuestions.push(...appMultis);
-
-    // 模块③ 综合素质50分：混选+多选 →
-    const allChoicePool = (getSubjectPool(0).concat(getSubjectPool(1)).concat(getSubjectPool(2)))
-      .filter(q => q.type === 'choice');
-    const zongChoices = pickQuestions(allChoicePool, 45, MK.usedIds);
-    zongChoices.forEach(q => { q.score = 1; q.subject = '综合素质'; q.section = '单选'; });
-    allQuestions.push(...zongChoices);
-    const zongMultis = genMultiChoice(5, MK.usedIds);
-    zongMultis.forEach(q => { q.score = 1; q.subject = '综合素质'; q.section = '多选'; });
-    allQuestions.push(...zongMultis);
-
-  } else {
-    // ===== ICA：综合能力评估，8种题型覆盖 =====
-    // 1. 现代汉语 50分
-    const xhPool = getSubjectPool(0);
-    const xhFills = pickQuestions(xhPool.filter(q => q.type === 'fill'), 10, MK.usedIds);
-    xhFills.forEach(q => { q.score = 1; q.subject = '现代汉语'; q.section = '填空'; });
-    allQuestions.push(...xhFills);
-
-    const xhCorr = genCorrection(10, MK.usedIds);
-    xhCorr.forEach(q => { q.subject = '现代汉语'; q.section = '改错'; });
-    allQuestions.push(...xhCorr);
-
-    const xhAna = genAnalysis(3, MK.usedIds);
-    xhAna.forEach(q => { q.subject = '现代汉语'; q.section = '分析'; });
-    allQuestions.push(...xhAna);
-
-    const xhSA = genShortAnswer(3, 'xh', MK.usedIds);
-    xhSA.forEach(q => { q.subject = '现代汉语'; q.section = '简答'; });
-    allQuestions.push(...xhSA);
-
-    // 2. 中国文化 50分
-    const whPool = getSubjectPool(1);
-    const whFills = pickQuestions(whPool.filter(q => q.type === 'fill'), 10, MK.usedIds);
-    whFills.forEach(q => { q.score = 2; q.subject = '中国文化'; q.section = '填空'; });
-    allQuestions.push(...whFills);
-
-    const whChoices = pickQuestions(whPool.filter(q => q.type === 'choice'), 10, MK.usedIds);
-    whChoices.forEach(q => { q.score = 1; q.subject = '中国文化'; q.section = '单选'; });
-    allQuestions.push(...whChoices);
-
-    const whMulti = genMultiChoice(5, MK.usedIds);
-    whMulti.forEach(q => { q.subject = '中国文化'; q.section = '多选'; });
-    allQuestions.push(...whMulti);
-
-    const whTerms = genTerm(3, 'wh', MK.usedIds);
-    whTerms.forEach(q => { q.subject = '中国文化'; q.section = '名词解释'; });
-    allQuestions.push(...whTerms);
-
-    // 3. 对外汉语 50分
-    const llPool = getSubjectPool(2);
-    const llFills = pickQuestions(llPool.filter(q => q.type === 'fill'), 10, MK.usedIds);
-    llFills.forEach(q => { q.score = 1; q.subject = '对外汉语'; q.section = '填空'; });
-    allQuestions.push(...llFills);
-
-    const llChoices = pickQuestions(llPool.filter(q => q.type === 'choice'), 10, MK.usedIds);
-    llChoices.forEach(q => { q.score = 1; q.subject = '对外汉语'; q.section = '单选'; });
-    allQuestions.push(...llChoices);
-
-    const llTerms = genTerm(2, 'll', MK.usedIds);
-    llTerms.forEach(q => { q.subject = '对外汉语'; q.section = '名词解释'; });
-    allQuestions.push(...llTerms);
-
-    const llSA = genShortAnswer(1, 'll', MK.usedIds);
-    llSA.forEach(q => { q.subject = '对外汉语'; q.section = '简答'; });
-    allQuestions.push(...llSA);
-
-    const llPlan = genLessonPlan(MK.usedIds);
-    llPlan.forEach(q => { q.subject = '对外汉语'; q.section = '教案'; });
-    allQuestions.push(...llPlan);
-  }
-
-  // 排序：先填空后其他
-  const typeOrder = {fill:0, choice:1, multi:2, correction:3, analysis:4, shortAnswer:5, term:6, lessonPlan:7};
-  allQuestions.sort((a, b) => {
-    const ta = typeOrder[a.type] || 99;
-    const tb = typeOrder[b.type] || 99;
-    if (ta !== tb) return ta - tb;
-    return 0;
+function startMockExam() {
+  MK.questions = []; MK.answers = {}; MK.qIdx = 0; MK.timeLeft = 6000; MK.started = false;
+  document.getElementById('mk-exam-type-label').textContent = 'ICA考试';
+  document.getElementById('mk-timer').textContent = '100:00';
+  document.getElementById('mk-timer').classList.add('ok');
+  var pool = [];
+  [0,1,2].forEach(function(si){ BANK.subjects[si].chapters.forEach(function(ch){ ch.questions.forEach(function(q){ pool.push(JSON.parse(JSON.stringify(q))); }); }); });
+  if (BANK.subjects.length > 3) { BANK.subjects[3].chapters.forEach(function(ch){ ch.questions.forEach(function(q){ pool.push(JSON.parse(JSON.stringify(q))); }); }); }
+  shuffle(pool);
+  var allQ = [];
+  // 每种题型生成数量
+  var config = [
+    {type:'fill', count:12, score:1, gen:null},           // 填空12题×1=12分
+    {type:'choice', count:14, score:1, gen:null},          // 单选14题×1=14分
+    {type:'multi', count:6, score:3, gen:genMultiChoice},  // 多选6题×3=18分
+    {type:'judge', count:8, score:1, gen:null},            // 判断8题×1=8分
+    {type:'correction', count:6, score:3, gen:genCorrection}, // 改错6题×3=18分
+    {type:'analysis', count:3, score:6, gen:genAnalysis},   // 分析3题×6=18分
+    {type:'shortAnswer', count:4, score:5, gen:function(){return genShortAnswer(4,'xh');}}, // 简答4题×5=20分
+    {type:'term', count:4, score:4, gen:function(){return genTerm(4);}}, // 名词解释4题×4=16分
+    {type:'lessonPlan', count:1, score:0, gen:function(){return genLessonPlan();}}, // 教案1题(参考)
+  ];
+  // 计算总分
+  var totalScore = 0;
+  config.forEach(function(c){ totalScore += c.count * c.score; });
+  // 根据总分自动调整分值和题数使其接近150分
+  var scale = 150 / totalScore;
+  config.forEach(function(c){ c.score = Math.round(c.score * scale); if (c.score < 1) c.score = 1; });
+  // 生成题目
+  config.forEach(function(c){
+    for (var i = 0; i < c.count; i++) {
+      var q = null;
+      if (c.gen) {
+        var gs = c.gen(1);
+        if (gs && gs.length > 0) q = gs[0];
+      }
+      if (!q) {
+        // 从pool中取对应类型
+        var matching = pool.filter(function(p){ return p.type === c.type && !allQ.some(function(a){ return a.id === p.id; }); });
+        if (matching.length > 0) {
+          var idx = Math.floor(Math.random() * matching.length);
+          q = JSON.parse(JSON.stringify(matching[idx]));
+        }
+      }
+      if (q) { q.score = c.score; allQ.push(q); }
+    }
   });
-
-  MK.questions = allQuestions;
+  // 分配科目标签
+  var subjLabels = ['现代汉语','中国文化','对外汉语'];
+  allQ.forEach(function(q, i){ q.subject = subjLabels[i % 3]; });
+  shuffle(allQ);
+  MK.questions = allQ;
   MK.started = true;
-
-  // 保存已用ID（按考试类型隔离）
-  localStorage.setItem(_k('mk_' + MK_examType + '_used_ids'), JSON.stringify([...MK.usedIds]));
-  // 增加考试次数（按考试类型隔离）
-  var cntKey = 'mk_' + MK_examType + '_count';
-  localStorage.setItem(_k(cntKey), JSON.stringify((parseInt(localStorage.getItem(_k(cntKey))||'0')+1)));
-
   showPage('mockExam');
-  renderMockExam();
-  startMockTimer();
+  renderMockQuestion();
+  startTimer();
 }
-
-// 渲染答题页
-function renderMockExam() {
-  const q = MK.questions[MK.qIdx];
-  const total = MK.questions.length;
-  const idx = MK.qIdx;
-  const userAns = MK.answers[q.id] || '';
-
-  // 更新进度文字
+function renderMockQuestion() {
+  if (MK.qIdx >= MK.questions.length) { submitMockExam(); return; }
+  var q = MK.questions[MK.qIdx], total = MK.questions.length, idx = MK.qIdx;
+  var ua = MK.answers[q.id] || '';
   document.getElementById('mk-progress-text').textContent = (idx+1) + '/' + total;
-
-  // 进度点
-  let dots = '';
-  for (let i = 0; i < total; i++) {
-    const oq = MK.questions[i];
-    let cls = 'd';
+  var dots = '';
+  for (var i = 0; i < total; i++) {
+    var cls = 'd'; var oq = MK.questions[i];
     if (i === idx) cls += ' cur';
-    else if (MK.answers[oq.id]) cls += ' ans';
-    dots += '<div class="' + cls + '" onclick="MK.qIdx=' + i + ';renderMockExam()"></div>';
+    else if (MK.answers[oq.id] !== undefined) cls += ' ans';
+    dots += '<div class="' + cls + '" onclick="jumpTo(' + i + ')"></div>';
   }
   document.getElementById('mk-progress-dots').innerHTML = dots;
-
-  // 题目标题
-  const typeLabels = {fill:'填空', choice:'单选', multi:'多选', correction:'改错', analysis:'分析', shortAnswer:'简答', term:'名词解释', lessonPlan:'教案'};
-  const typeLabel = typeLabels[q.type] || q.type;
-
-  let html = '<div class="mk-section">' + q.subject + ' · ' + q.section + ' · ' + q.score + '分</div>';
-  // 清除题目原文中所有编号前缀（如 "1." "11.（1）" "12.(1)" 等）
-  var cleanText = q.text.replace(/^\d+[.、．\s）\)]*(\d*[.、．\s）\)]*)*/, '').replace(/^[（(]\d+[）)]\s*/, '').replace(/^[\s,，.、．:：]+/, '');
-  html += '<div class="qb"><span class="fw6" style="color:#4A7EC2;margin-right:6px">' + (idx+1) + '.</span> ' + cleanText + '</div>';
-
+  var typeLabels = {fill:'填空',choice:'单选',multi:'多选',judge:'判断',correction:'改错',analysis:'分析',shortAnswer:'简答',term:'名词解释',lessonPlan:'教案'};
+  var html = '<div class="mk-section">' + q.subject + ' — ' + (typeLabels[q.type]||'') + ' · ' + q.score + '分</div>';
+  html += '<div class="qb"><span class="fw6" style="color:#4A7EC2;margin-right:6px">' + (idx+1) + '.</span> ' + q.text + '</div>';
   if (q.type === 'fill' || q.type === 'correction') {
-    html += '<input class="mk-fi" id="mk-inp" type="text" placeholder="输入答案..." value="' + userAns + '">';
-  } else if (q.type === 'choice') {
-    (q.options || []).forEach((opt, oi) => {
-      const k = String.fromCharCode(65 + oi);
-      html += '<div class="mk-opt' + (userAns === k ? ' sel' : '') + '" onclick="selMock(\'' + k + '\')">' + opt + '</div>';
+    html += '<input class="mk-fi" id="mk-inp" type="text" placeholder="输入答案..." value="' + ua + '">';
+  } else if (q.type === 'shortAnswer' || q.type === 'analysis' || q.type === 'term' || q.type === 'lessonPlan') {
+    var ph = q.type === 'lessonPlan' ? '请在此编写教案...' : '请输入你的答案...';
+    html += '<textarea class="mk-textarea" id="mk-ta" placeholder="' + ph + '" style="min-height:' + (q.type==='lessonPlan'?'200':'80') + 'px">' + ua + '</textarea>';
+  } else if (q.type === 'judge') {
+    html += '<div class="mk-opt' + (ua === '√' ? ' sel' : '') + '" onclick="selOpt(\'√\')">√ 正确</div>';
+    html += '<div class="mk-opt' + (ua === '×' ? ' sel' : '') + '" onclick="selOpt(\'×\')">× 错误</div>';
+  } else {
+    (q.options||[]).forEach(function(opt, i){
+      var k = String.fromCharCode(65+i);
+      var cls = 'mk-opt';
+      if (q.type === 'multi') {
+        var arr = typeof ua === 'string' ? ua.split('') : (Array.isArray(ua)?ua:[]);
+        if (arr.indexOf(k) !== -1) cls += ' sel';
+        html += '<div class="' + cls + '" onclick="toggleMulti(\'' + k + '\')">' + opt + '</div>';
+      } else {
+        if (ua === k) cls += ' sel';
+        html += '<div class="' + cls + '" onclick="selOpt(\'' + k + '\')">' + opt + '</div>';
+      }
     });
-  } else if (q.type === 'multi') {
-    const userArr = userAns ? (typeof userAns === 'string' ? userAns.split('') : userAns) : [];
-    (q.options || []).forEach((opt, oi) => {
-      const k = String.fromCharCode(65 + oi);
-      html += '<div class="mk-opt' + (userArr.includes(k) ? ' sel' : '') + '" onclick="toggleMockMulti(\'' + k + '\')">' + opt + '</div>';
-    });
-    html += '<div class="f12 cg">已选：' + (userArr.length > 0 ? userArr.join('、') : '无') + '（点击选项切换）</div>';
-  } else if (q.type === 'analysis' || q.type === 'shortAnswer' || q.type === 'term') {
-    html += '<textarea class="mk-textarea" id="mk-ta" placeholder="请输入你的答案...">' + userAns + '</textarea>';
-  } else if (q.type === 'lessonPlan') {
-    html += '<textarea class="mk-textarea" id="mk-ta" placeholder="请在此编写教案..." style="min-height:200px">' + userAns + '</textarea>';
-    html += '<div class="f12 cg mt4">💡 写出：教学目标、教学环节、教学方法等</div>';
+    if (q.type === 'multi') {
+      var uaArr = typeof ua === 'string' ? ua.split('') : (Array.isArray(ua)?ua:[]);
+      html += '<div class="f12 cg mt4">已选：' + (uaArr.length > 0 ? uaArr.join('、') : '无') + '</div>';
+    }
   }
-
   document.getElementById('mk-exam-scroll').innerHTML = html;
-
-  // 导航按钮
-  let navBtns = '';
-  navBtns += '<button class="btn btn-outline" onclick="mockPrev()" ' + (idx === 0 ? 'disabled style="opacity:.4"' : '') + '>‹ 上一题</button>';
-  navBtns += '<button class="btn btn-primary" onclick="mockNext()">' + (idx === total - 1 ? '最后一题' : '下一题 ›') + '</button>';
-  document.getElementById('mk-nav-btns').innerHTML = navBtns;
-
-  // 交卷按钮（固定在底部前）
-  document.getElementById('mk-nav-btns').innerHTML +=
-    '<button class="mk-submit-btn mt8" onclick="confirmSubmitMock()">📝 交卷</button>';
-
+  var nav = '<button class="btn btn-outline" onclick="prevQ()" ' + (idx === 0 ? 'disabled style="opacity:.4"' : '') + '>‹ 上一题</button>';
+  nav += '<button class="btn btn-primary" onclick="nextQ()">' + (idx === total-1 ? '最后一题' : '下一题 ›') + '</button>';
+  document.getElementById('mk-nav-btns').innerHTML = nav + '<button class="mk-submit-btn mt8" onclick="confirmSubmit()">📝 交卷</button>';
   document.getElementById('mk-exam-scroll').scrollTop = 0;
 }
-
-function selMock(k) {
-  const q = MK.questions[MK.qIdx];
-  MK.answers[q.id] = k;
-  renderMockExam();
+function selOpt(k) {
+  var q = MK.questions[MK.qIdx];
+  if (q.type === 'multi') { var arr=(MK.answers[q.id]||'').split(''); var i=arr.indexOf(k); if(i!==-1)arr.splice(i,1);else arr.push(k); arr.sort(); MK.answers[q.id]=arr.join(''); }
+  else MK.answers[q.id] = k;
+  renderMockQuestion();
 }
-
-function toggleMockMulti(k) {
-  const q = MK.questions[MK.qIdx];
-  let arr = MK.answers[q.id] ? (typeof MK.answers[q.id] === 'string' ? MK.answers[q.id].split('') : [...MK.answers[q.id]]) : [];
-  if (arr.includes(k)) {
-    arr = arr.filter(x => x !== k);
-  } else {
-    arr.push(k);
-    arr.sort();
-  }
-  MK.answers[q.id] = arr;
-  renderMockExam();
-}
-
-function mockPrev() {
-  if (MK.qIdx > 0) { MK.qIdx--; renderMockExam(); }
-}
-
-function mockNext() {
-  // 保存当前输入
-  const q = MK.questions[MK.qIdx];
-  if (q.type === 'fill' || q.type === 'correction') {
-    const inp = document.getElementById('mk-inp');
-    if (inp) MK.answers[q.id] = inp.value.trim();
-  } else if (q.type === 'analysis' || q.type === 'shortAnswer' || q.type === 'term' || q.type === 'lessonPlan') {
-    const ta = document.getElementById('mk-ta');
-    if (ta) MK.answers[q.id] = ta.value.trim();
-  }
-  if (MK.qIdx < MK.questions.length - 1) { MK.qIdx++; renderMockExam(); }
-}
-
-// 计时器
-function startMockTimer() {
-  if (MK.timer) clearInterval(MK.timer);
-  MK.timer = setInterval(function() {
-    MK.timeLeft--;
-    const m = Math.floor(MK.timeLeft / 60);
-    const s = MK.timeLeft % 60;
-    document.getElementById('mk-timer').textContent =
-      (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
-    if (MK.timeLeft <= 300) {
-      document.getElementById('mk-timer').classList.remove('ok');
-    }
-    if (MK.timeLeft <= 0) {
-      clearInterval(MK.timer);
-      MK.timer = null;
-      if (confirm('⏰ 时间到！是否交卷？点击"确定"交卷，"取消"继续作答。')) {
-        submitMockExam();
-      } else {
-        document.getElementById('mk-timer').textContent = '00:00';
-      }
-    }
-  }, 1000);
-}
-
-function confirmSubmitMock() {
-  const total = MK.questions.length;
-  const answered = Object.keys(MK.answers).length;
-  if (answered < total) {
-    if (!confirm('还有 ' + (total - answered) + ' 题未作答，确定交卷吗？')) return;
-  } else {
-    if (!confirm('所有题目已作答，确定交卷？')) return;
-  }
+function toggleMulti(k) { selOpt(k); }
+function prevQ() { saveInput(); if(MK.qIdx>0){MK.qIdx--;renderMockQuestion();} }
+function nextQ() { saveInput(); if(MK.qIdx<MK.questions.length-1){MK.qIdx++;renderMockQuestion();} }
+function jumpTo(i) { saveInput(); MK.qIdx=i; renderMockQuestion(); }
+function saveInput() { var q=MK.questions[MK.qIdx]; if(!q)return; var inp=document.getElementById('mk-inp'); var ta=document.getElementById('mk-ta'); if(inp)MK.answers[q.id]=inp.value.trim(); if(ta)MK.answers[q.id]=ta.value.trim(); }
+function confirmSubmit() {
+  saveInput();
+  var total=MK.questions.length, ans=Object.keys(MK.answers).length;
+  if(ans<total&&!confirm('还有'+(total-ans)+'题未作答，确定交卷？')) return;
+  if(ans>=total&&!confirm('所有题目已作答，确定交卷？')) return;
   submitMockExam();
 }
-
-// 提交试卷
 function submitMockExam() {
-  if (MK.timer) { clearInterval(MK.timer); MK.timer = null; }
-
-  // 保存当前题的答案
-  const q = MK.questions[MK.qIdx];
-  if (q) {
-    if (q.type === 'fill' || q.type === 'correction') {
-      const inp = document.getElementById('mk-inp');
-      if (inp) MK.answers[q.id] = inp.value.trim();
-    } else if (q.type === 'analysis' || q.type === 'shortAnswer' || q.type === 'term' || q.type === 'lessonPlan') {
-      const ta = document.getElementById('mk-ta');
-      if (ta) MK.answers[q.id] = ta.value.trim();
-    }
-  }
-
-  // 计分
-  let totalScore = 0;
-  let subjectScores = {};
-  let subjectTotals = {};
-  const results = [];
-
-  MK.questions.forEach(q => {
-    const ua = MK.answers[q.id] || '';
-    let correct = false;
-
-    if (q.type === 'fill' || q.type === 'correction') {
-      correct = ua.replace(/\s/g,'').toLowerCase().includes(q.answer.replace(/\s/g,'').toLowerCase()) ||
-                ua.replace(/\s/g,'').toLowerCase() === q.answer.replace(/\s/g,'').toLowerCase();
-    } else if (q.type === 'choice') {
-      correct = ua === q.answer;
-    } else if (q.type === 'multi') {
-      const userArr = Array.isArray(ua) ? ua : (ua ? ua.split('') : []);
-      const ansArr = Array.isArray(q.answer) ? q.answer : [q.answer];
-      correct = userArr.length === ansArr.length && userArr.every(v => ansArr.includes(v));
-    } else if (q.type === 'analysis' || q.type === 'shortAnswer' || q.type === 'term') {
-      // 主观题：包含关键词即算分
-      const keywords = q.answer.replace(/[，。、；：？！""''【】《》\s]/g,'').split('').filter(k => k.length > 1);
-      const uaClean = ua.replace(/\s/g,'');
-      correct = q.answer.length > 3 ? (uaClean.length > 5) : (ua === q.answer);
-      // 关键词匹配
-      let matchCount = 0;
-      q.answer.split(/[，。、；：]/).forEach(kw => {
-        if (kw.trim().length > 1 && ua.includes(kw.trim())) matchCount++;
-      });
-      if (matchCount >= 1) correct = true;
-    } else if (q.type === 'lessonPlan') {
-      // 教案不判分
-      correct = true;
-    }
-
-    if (correct && q.type !== 'lessonPlan') {
-      totalScore += q.score;
-      if (subjectScores[q.subject] !== undefined) subjectScores[q.subject] += q.score;
-    }
-    subjectTotals[q.subject] = (subjectTotals[q.subject] || 0) + q.score;
-
-    // 教案判分（仅ICA）：写了的给10分参考分
-    if (q.type === 'lessonPlan' && ua.length > 20 && MK_examType !== 'ctcsol') {
-      totalScore += 10;
-      if (subjectScores[q.subject] !== undefined) subjectScores[q.subject] += 10;
-    }
-
-    results.push({
-      id: q.id,
-      type: q.type,
-      subject: q.subject,
-      section: q.section,
-      score: q.score,
-      text: q.text,
-      options: q.options,
-      answer: q.answer,
-      userAnswer: ua,
-      correct: correct
-    });
-
-    // 错题录入错题本（客观题型）
-    if (!correct && (q.type === 'fill' || q.type === 'choice' || q.type === 'multi' || q.type === 'correction')) {
-      addErr(q, q.subject, '模拟考试', ua);
-    }
+  if(MK.timer){clearInterval(MK.timer);MK.timer=null;}
+  saveInput();
+  var totalScore=0,earned=0,correct=0,wrong=0,results=[];
+  MK.questions.forEach(function(q){
+    var ua=MK.answers[q.id]||'',sc=q.score||1; totalScore+=sc;
+    var isCorrect=false;
+    if(q.type==='choice') isCorrect=ua===q.answer;
+    else if(q.type==='multi'){var a1=(Array.isArray(q.answer)?q.answer:[]).slice().sort();var a2=ua.split('').sort();isCorrect=a1.length===a2.length&&a1.every(function(v,i){return v===a2[i];});}
+    else if(q.type==='judge') isCorrect=ua.trim()===(q.answer||'').trim();
+    else if(q.type==='fill') isCorrect=ua.replace(/\s/g,'').toLowerCase().indexOf((q.answer||'').replace(/\s/g,'').toLowerCase())!==-1;
+    else if(q.type==='lessonPlan'){isCorrect=true;sc=0;}
+    else isCorrect=ua.length>3;
+    if(isCorrect&&q.type!=='lessonPlan'){earned+=sc;correct++;}else wrong++;
+    results.push({id:q.id,text:q.text,answer:q.answer,options:q.options,type:q.type,ua:ua,correct:isCorrect,score:sc,subject:q.subject});
+    if(!isCorrect&&(q.type==='choice'||q.type==='multi'||q.type==='judge'||q.type==='fill')) addErr(q,q.subject||'模拟考试','模拟考试',ua);
   });
-
-  // 保存mock结果
-  MK.results = results;
-  MK.totalScore = totalScore;
-  MK.subjectScores = subjectScores;
-  MK.subjectTotals = subjectTotals;
-
   showPage('mockResult');
-  renderMockResult();
-}
-
-// 退出模拟考试
-function exitMockExam() {
-  if (MK.timer) { clearInterval(MK.timer); MK.timer = null; }
-  MK.started = false;
-  showPage('home');
-}
-
-// 渲染结果页
-function renderMockResult() {
-  const area = document.getElementById('mk-result-area');
-  const total = MK.questions.length;
-  const answered = MK.results.filter(r => r.userAnswer).length;
-  const correctCount = MK.results.filter(r => r.correct && r.type !== 'lessonPlan').length;
-
-  let html = '<div class="tac mt16">' +
-    '<div style="font-size:48px">📊</div>' +
-    '<div class="fw6" style="font-size:18px">考试完成</div>' +
-    '</div>';
-
-  // 总分卡片
-  html += '<div class="card mt16 flex-sb">' +
-    '<div class="tac"><div class="mk-result-score">' + MK.totalScore + '</div><div class="mk-result-sub">得分</div></div>' +
-    '<div class="tac"><div style="font-size:24px;font-weight:700;color:#43A047">' + correctCount + '</div><div class="f12 cg">正确</div></div>' +
-    '<div class="tac"><div style="font-size:24px;font-weight:700;color:#E53935">' + (total - correctCount) + '</div><div class="f12 cg">错误/未答</div></div>' +
-    '<div class="tac"><div style="font-size:24px;font-weight:700;color:#4A7EC2">' + total + '</div><div class="f12 cg">总题</div></div>' +
-    '</div>';
-
-  // 各科/各模块得分
-  html += '<div class="card-info"><div class="fw6 mb8">' + (MK_examType === 'ctcsol' ? '各模块得分' : '各科得分') + '</div>';
-  const subjKeys = Object.keys(MK.subjectTotals);
-  subjKeys.forEach(subj => {
-    const got = MK.subjectScores[subj] || 0;
-    const max = MK.subjectTotals[subj] || 50;
-    const pct = Math.round(got / max * 100);
-    html += '<div class="flex-sb f13 mb4"><span>' + subj + '</span><span>' + got + '/' + max + '分 (' + pct + '%)</span></div>';
-    html += '<div class="sc-bar" style="margin-bottom:8px"><div class="fl" style="width:' + pct + '%;background:' + (pct >= 60 ? '#43A047' : '#E53935') + '"></div></div>';
+  var pct=Math.round(earned/totalScore*100);
+  var html='<div class="tac mt16"><div style="font-size:48px">📊</div><div class="mk-result-score">'+earned+'/'+totalScore+'</div><div class="mk-result-sub">正确'+correct+'题 · 错误'+wrong+'题 · '+pct+'%</div></div>'+
+    '<div class="card mt16 flex-sb"><div class="tac"><div style="font-size:24px;color:#43A047;font-weight:700">'+correct+'</div><div class="f12 cg">正确</div></div>'+
+    '<div class="tac"><div style="font-size:24px;color:#E53935;font-weight:700">'+wrong+'</div><div class="f12 cg">错误</div></div>'+
+    '<div class="tac"><div style="font-size:24px;color:#4A7EC2;font-weight:700">'+MK.questions.length+'</div><div class="f12 cg">总题</div></div></div>';
+  var subs={}; results.forEach(function(r){var k=r.subject||'综合';if(!subs[k])subs[k]={e:0,t:0};subs[k].t+=r.score;if(r.correct)subs[k].e+=r.score;});
+  html+='<div class="card-info"><div class="fw6 mb8">各科得分</div>';
+  Object.keys(subs).forEach(function(k){var s=subs[k];html+='<div class="flex-sb f13 mb4"><span>'+k+'</span><span>'+s.e+'/'+s.t+'分</span></div>';});
+  html+='</div><div class="card-info"><div class="fw6 mb8">📕 错题回顾</div>';
+  results.filter(function(r){return !r.correct;}).forEach(function(r){
+    html+='<div class="f13" style="padding:6px 0;border-bottom:1px solid #F0F2F6"><div>'+r.text+'</div><div class="cr">你的答案：'+(r.ua||'(未答)')+'</div><div class="mk-correct">正确答案：'+(typeof r.answer==='object'?(r.answer||[]).join('、'):r.answer)+'</div></div>';
   });
-  html += '</div>';
-
-  // 答题详情
-  html += '<div class="fw6 mt16 mb8">📋 答题详情</div>';
-  MK.results.forEach((r, i) => {
-    const typeLabels = {fill:'填空', choice:'单选', multi:'多选', correction:'改错', analysis:'分析', shortAnswer:'简答', term:'名词解释', lessonPlan:'教案'};
-    html += '<div class="card" style="padding:12px;margin-bottom:8px">' +
-      '<div class="flex-sb f12 mb4"><span class="cg">' + (i+1) + '. ' + (r.section||typeLabels[r.type]||'') + '</span>' +
-      (r.type === 'lessonPlan' ? '<span style="color:#FF9800">参考分：10分</span>' :
-        '<span class="' + (r.correct ? 'cblue' : 'cr') + '">' + (r.correct ? '✅ 正确 +' + r.score : '❌ 错误') + '</span>') +
-      '</div>' +
-      '<div class="f13" style="line-height:1.5">' + r.text.replace(/^\d+[.、．\s）\)]*(\d*[.、．\s）\)]*)*/, '').replace(/^[（(]\d+[）)]\s*/, '').replace(/^[\s,，.、．:：]+/, '') + '</div>' +
-      (r.type === 'lessonPlan' ? '' :
-        '<div class="mk-ans-box mt8">' +
-        (r.userAnswer ? '<div' + (r.correct ? ' class="mk-correct"' : ' class="mk-wrong"') + '>你的答案：' + (Array.isArray(r.userAnswer) ? r.userAnswer.join('、') : r.userAnswer) + '</div>' : '<div class="cg">未作答</div>') +
-        '<div class="mk-correct">参考答案：' + r.answer + '</div></div>') +
-      '</div>';
-  });
-
-  html += '<div class="gap8 mt16 mb16">' +
-    '<button class="btn btn-primary" onclick="showPage(\'mockStart\')">再来一次</button>' +
-    '<button class="btn btn-outline" onclick="showPage(\'home\')">返回首页</button>' +
-    '</div>';
-
-  area.innerHTML = html;
+  html+='</div><div class="gap8 mt16 mb16"><button class="btn btn-primary" onclick="showPage(\'mockStart\')">再来一次</button><button class="btn btn-outline" onclick="showPage(\'home\')">返回首页</button></div>';
+  document.getElementById('mk-result-area').innerHTML = html;
 }
-
+function exitMockExam() { if(MK.timer)clearInterval(MK.timer); showPage('home'); }
+function startTimer() {
+  if(MK.timer)clearInterval(MK.timer);
+  MK.timer=setInterval(function(){
+    MK.timeLeft--;
+    var m=Math.floor(MK.timeLeft/60),s=MK.timeLeft%60;
+    document.getElementById('mk-timer').textContent=(m<10?'0':'')+m+':'+(s<10?'0':'')+s;
+    if(MK.timeLeft<=0){clearInterval(MK.timer);if(confirm('时间到！交卷？'))submitMockExam();}
+  },1000);
+}
 // ======== 启动 ========
-updateBadge();
-// 清掉旧缓存，防止覆盖IIFE注入的数据
-localStorage.removeItem(_k('tcfl_bank'));
-renderHome();
+try {
+  updateBadge();
+  // 清掉旧缓存，防止覆盖IIFE注入的数据
+  localStorage.removeItem(_k('tcfl_bank'));
+  renderHome();
+} catch(e) { console.warn('Data init error:', e); }
 </script>
 </body>
 </html>
