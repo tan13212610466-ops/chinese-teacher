@@ -547,15 +547,16 @@ function showPage(id){
 }
 function goBack(){
   pageStack.pop();var prev=pageStack[pageStack.length-1]||'home';
+  // Subject tabs now start practice directly, so go back to home
+  if(prev==='culture'||prev==='xh'||prev==='ll'){pageStack=['home'];showPage('home');switchTab('home');return;}
   showPage(prev);
-  if(prev==='culture'||prev==='xh'||prev==='ll')renderSubject(prev);
   if(prev==='wrong')renderWrong();
 }
 function switchTab(tab){
   if(tab==='home'){showPage('home');pageStack=['home'];return;}
   pageStack=[tab];
   if(tab==='wrong'){showPage('wrong');renderWrong();}
-  else if(tab==='culture'||tab==='xh'||tab==='ll'){showPage('subject');renderSubject(tab);}
+  else if(tab==='culture'||tab==='xh'||tab==='ll'){startPractice(tab);}
   document.querySelectorAll('.tab-item').forEach(function(t){t.classList.toggle('active',t.getAttribute('data-tab')===tab);});
 }
 
