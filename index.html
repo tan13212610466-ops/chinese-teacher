@@ -241,6 +241,44 @@ input,select,textarea,button{font-family:inherit;font-size:inherit}
 @media(max-width:767px){
   .desktop-sidebar,.desktop-main,.d-stats,.d-subj-grid{display:none!important}
 }
+
+/* ====== Exam Mode ====== */
+.exam-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:10px 14px;background:var(--card);border-radius:var(--radius);border:1px solid var(--border)}
+.exam-header .eh-timer{font-size:16px;font-weight:700;color:var(--red)}
+.exam-header .eh-timer.warning{animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.5}}
+.exam-header .eh-progress{font-size:13px;color:var(--text2);flex:1;text-align:center}
+.exam-header .eh-score{font-size:13px;color:var(--text3)}
+.exam-card{background:var(--card);border-radius:var(--radius);padding:20px;border:1px solid var(--border);margin-bottom:12px}
+.exam-meta{font-size:12px;color:var(--blue);font-weight:600;margin-bottom:6px}
+.exam-text{font-size:17px;font-weight:500;line-height:1.6;margin-bottom:16px}
+.exam-options{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.paper-list{display:flex;flex-direction:column;gap:12px}
+.paper-card{background:var(--card);border-radius:var(--radius);padding:16px;border:1.5px solid var(--border);cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:14px}
+.paper-card:active{transform:scale(.98);border-color:var(--blue)}
+.paper-card .pc-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.paper-card .pc-body{flex:1}
+.paper-card .pc-name{font-size:15px;font-weight:600}
+.paper-card .pc-count{font-size:12px;color:var(--text3);margin-top:2px}
+.exam-result{padding:20px;text-align:center}
+.exam-result .er-icon{font-size:48px;margin-bottom:10px}
+.exam-result .er-title{font-size:20px;font-weight:700;margin-bottom:4px}
+.exam-result .er-sub{font-size:13px;color:var(--text3);margin-bottom:20px}
+.exam-result .er-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;max-width:360px;margin-left:auto;margin-right:auto}
+.exam-result .er-stat{background:var(--card);border-radius:var(--radius);padding:14px;border:1px solid var(--border)}
+.exam-result .er-stat .es-num{font-size:22px;font-weight:700}
+.exam-result .er-stat .es-label{font-size:11px;color:var(--text3);margin-top:2px}
+.exam-result .er-bar{height:8px;border-radius:4px;background:#E8EDF2;margin-bottom:20px;overflow:hidden;max-width:360px;margin-left:auto;margin-right:auto}
+.exam-result .er-bar .fl{height:100%;border-radius:4px;transition:width .8s}
+.mock-config{background:var(--card);border-radius:var(--radius);padding:24px;border:1px solid var(--border);max-width:400px;margin:0 auto;text-align:center}
+.mock-config .mc-title{font-size:18px;font-weight:700;margin-bottom:4px}
+.mock-config .mc-sub{font-size:13px;color:var(--text3);margin-bottom:20px}
+.mock-config .mc-stat{display:flex;justify-content:center;gap:20px;margin-bottom:20px}
+.mock-config .mc-stat > div{text-align:center}
+.mock-config .mc-stat .ms-num{font-size:24px;font-weight:700;color:var(--blue)}
+.mock-config .mc-stat .ms-label{font-size:12px;color:var(--text3)}
+.mock-config .mc-btn{display:inline-block;padding:12px 32px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:#FFF;font-size:16px;font-weight:600;cursor:pointer}
+.mock-config .mc-btn:active{opacity:.85}
 </style>
 </head>
 <body>
@@ -289,6 +327,8 @@ input,select,textarea,button{font-family:inherit;font-size:inherit}
         <button class="s-nav" data-dpage="xh" onclick="dSwitchPage('xh')"><span class="s-icon">🗣️</span> 现代汉语<span class="s-badge" id="dBX">35</span></button>
         <button class="s-nav" data-dpage="ll" onclick="dSwitchPage('ll')"><span class="s-icon">📚</span> 教学理论<span class="s-badge" id="dBL">30</span></button>
         <button class="s-nav" data-dpage="wrong" onclick="dSwitchPage('wrong')"><span class="s-icon">❌</span> 错题本<span class="s-badge red" id="dWB"></span></button>
+        <button class="s-nav" data-dpage="papers" onclick="dSwitchPage('papers')"><span class="s-icon">📜</span> 历年真题</button>
+        <button class="s-nav" data-dpage="mock" onclick="dSwitchPage('mock')"><span class="s-icon">🎯</span> 模拟考场</button>
       </nav>
       <div class="sidebar-footer">
         <button class="s-nav logout" onclick="doLogout()"><span class="s-icon">🚪</span> 退出登录</button>
@@ -311,8 +351,8 @@ input,select,textarea,button{font-family:inherit;font-size:inherit}
       <div class="home-cards" id="subjectCards"></div>
       <div class="section-label">综合考试</div>
       <div class="home-c2">
-        <div class="home-card" onclick="toast('模块开发中')"><div class="hc-icon" style="background:#F3E5F5">📜</div><div class="hc-body"><div class="hc-name">历年真题</div><div class="hc-count">ICA历年真题试卷</div></div></div>
-        <div class="home-card" onclick="toast('模块开发中')"><div class="hc-icon" style="background:#FFF3E0">🎯</div><div class="hc-body"><div class="hc-name">模拟考场</div><div class="hc-count">全真限时考试</div></div></div>
+        <div class="home-card" onclick="showPapers()"><div class="hc-icon" style="background:#F3E5F5">📜</div><div class="hc-body"><div class="hc-name">历年真题</div><div class="hc-count">ICA历年真题试卷</div></div></div>
+        <div class="home-card" onclick="showMockConfig()"><div class="hc-icon" style="background:#FFF3E0">🎯</div><div class="hc-body"><div class="hc-name">模拟考场</div><div class="hc-count">全真限时考试</div></div></div>
       </div>
       <div class="section-label">其他</div>
       <div class="home-cards">
@@ -324,6 +364,8 @@ input,select,textarea,button{font-family:inherit;font-size:inherit}
     <div class="page" id="page-presult"></div>
     <div class="page" id="page-subject"></div>
     <div class="page" id="page-wrong"></div>
+    <div class="page" id="page-exam"></div>
+    <div class="page" id="page-exresult"></div>
   </div>
   <!-- Bottom Tab -->
   <div class="tab-bar" id="tabBar">
@@ -548,13 +590,14 @@ function showPage(id){
   document.getElementById('headerBack').classList.toggle('hidden',isHome);
   var hideTab=id==='practice'||id==='presult';
   document.getElementById('tabBar').classList.toggle('hide',hideTab);
-  document.getElementById('headerTitle').textContent={home:'📚 笔试刷题',practice:'刷题中',presult:'答题结果',subject:'题库',wrong:'错题本'}[id]||'';
+  document.getElementById('headerTitle').textContent={home:'📚 笔试刷题',practice:'刷题中',presult:'答题结果',subject:'题库',wrong:'错题本',exam:'考试',exresult:'考试结果'}[id]||'';
 }
 function goBack(){
   pageStack.pop();var prev=pageStack[pageStack.length-1]||'home';
   // Subject tabs now start practice directly, so go back to home
   if(prev==='culture'||prev==='xh'||prev==='ll'){pageStack=['home'];showPage('home');switchTab('home');return;}
   showPage(prev);
+  if(prev==='exam'||prev==='exresult'){pageStack=['home'];showPage('home');switchTab('home');return;}
   if(prev==='wrong')renderWrong();
 }
 function switchTab(tab){
@@ -844,8 +887,8 @@ function dRenderHome(){
     }).join('')+'</div>'+
     '<div class="f12 cg fw6 mb8" style="font-size:12px;color:var(--text3);font-weight:600;margin-bottom:10px;margin-top:8px">综合考试</div>'+
     '<div style="display:flex;gap:12px;margin-bottom:16px">'+
-    '<div class="home-card" onclick="toast(\'模块开发中\')" style="flex:1;border-left:4px solid #7B1FA2"><div class="hc-icon" style="background:#F3E5F5">📜</div><div class="hc-body"><div class="hc-name">历年真题</div><div class="hc-count">ICA真题试卷</div></div></div>'+
-    '<div class="home-card" onclick="toast(\'模块开发中\')" style="flex:1;border-left:4px solid #EF6C00"><div class="hc-icon" style="background:#FFF3E0">🎯</div><div class="hc-body"><div class="hc-name">模拟考场</div><div class="hc-count">全真限时考试</div></div></div></div>'+
+    '<div class="home-card" onclick="dShowPapers()" style="flex:1;border-left:4px solid #7B1FA2"><div class="hc-icon" style="background:#F3E5F5">📜</div><div class="hc-body"><div class="hc-name">历年真题</div><div class="hc-count">ICA真题试卷</div></div></div>'+
+    '<div class="home-card" onclick="dShowMockConfig()" style="flex:1;border-left:4px solid #EF6C00"><div class="hc-icon" style="background:#FFF3E0">🎯</div><div class="hc-body"><div class="hc-name">模拟考场</div><div class="hc-count">全真限时考试</div></div></div></div>'+
     '<div style="display:flex;gap:12px">'+
     '<div class="home-card" onclick="dStartWrong()" style="flex:1;border-left:4px solid var(--red)"><div class="hc-icon" style="background:var(--red-light)">❌</div><div class="hc-body"><div class="hc-name">错题本</div><div class="hc-count">'+wt+' 道错题待复习</div></div></div>'+
     '<div class="home-card" onclick="dStartRandom()" style="flex:1;border-left:4px solid #7B1FA2"><div class="hc-icon" style="background:#F3E5F5">🎲</div><div class="hc-body"><div class="hc-name">随机练习</div><div class="hc-count">三科混合出题</div></div></div></div>';
@@ -941,6 +984,314 @@ window.addEventListener('resize',function(){
   a.classList.toggle('desktop',d);
   if(d&&currentUser)dSwitchPage(currentSubject||'home');
 });
+
+
+// ====== Exam Papers ======
+function getExamPapers(){
+  var years={};
+  tabSubjects.forEach(function(s){
+    (subjectData[s]||[]).forEach(function(q){
+      var y=q.year||'其他';
+      if(!years[y])years[y]={};
+      if(!years[y][s])years[y][s]=[];
+      years[y][s].push(q);
+    });
+  });
+  var papers=[];
+  ['2024','2025','2026'].forEach(function(y){
+    if(years[y]){
+      var qs=[];
+      tabSubjects.forEach(function(s){if(years[y][s])qs=qs.concat(years[y][s]);});
+      if(qs.length>0)papers.push({id:'p_'+y,name:y+'年ICA真题',year:y,questions:qs,count:qs.length});
+    }
+  });
+  // Also add any remaining year
+  for(var y in years){
+    if(['2024','2025','2026'].indexOf(y)<0){
+      var qs=[];
+      tabSubjects.forEach(function(s){if(years[y][s])qs=qs.concat(years[y][s]);});
+      if(qs.length>0)papers.push({id:'p_'+y,name:y+'年ICA真题',year:y,questions:qs,count:qs.length});
+    }
+  }
+  return papers;
+}
+
+var examQs=[],examQIndex=0,examStats={total:0,correct:0,wrong:0},examTimer=null,examTimeLeft=0,examMode='';
+
+function showPapers(){
+  var papers=getExamPapers();
+  pageStack.push('exam');showPage('exam');
+  document.getElementById('headerTitle').textContent='📜 历年真题';
+  var html='<div class="section-label" style="padding-top:0">选择试卷</div><div class="paper-list">'+
+    papers.map(function(p){return '<div class="paper-card" onclick="startPaper(\''+p.id+'\')"><div class="pc-icon" style="background:#F3E5F5">📜</div><div class="pc-body"><div class="pc-name">'+p.name+'</div><div class="pc-count">'+p.count+' 题 · 三科综合</div></div></div>';}).join('')+
+    '</div>';
+  document.getElementById('page-exam').innerHTML=html;
+}
+
+function startPaper(pid){
+  var papers=getExamPapers();
+  var paper=papers.find(function(p){return p.id===pid;});
+  if(!paper){toast('试卷加载失败');return;}
+  var qs=paper.questions.map(function(q){return{q:q,subject:getSubjectById(q.id)};});
+  shuffle(qs);
+  examQs=qs;examQIndex=0;examMode='paper';
+  examStats={total:qs.length,correct:0,wrong:0};
+  showExamQ();
+}
+
+function getSubjectById(id){
+  for(var i=0;i<tabSubjects.length;i++){
+    if((subjectData[tabSubjects[i]]||[]).find(function(q){return q.id===id;}))return tabSubjects[i];
+  }
+  return 'culture';
+}
+
+function showExamQ(){
+  if(examQIndex>=examQs.length){showExamResult();return;}
+  var item=examQs[examQIndex],q=item.q,s=item.subject;
+  pageStack.push('exam');showPage('exam');
+  document.getElementById('headerTitle').textContent='📜 '+(examQIndex+1)+'/'+examStats.total;
+  var answered=q._examAnswered;
+  var html='<div class="exam-header"><span class="eh-progress">'+(examQIndex+1)+'/'+examStats.total+' · '+names[s]+'</span><span class="eh-score">✅'+examStats.correct+' ❌'+examStats.wrong+'</span></div>'+
+    '<div class="exam-card"><div class="exam-meta">'+typeNames[q.type]+(q.year?' · '+q.year:'')+'</div>'+
+    '<div class="exam-text">'+escHtml(q.text)+'</div>';
+  if(q.type==='choice'&&q.options&&q.options.length>0){
+    html+='<div class="exam-options">';
+    q.options.forEach(function(o,j){
+      var cls='qp-option';
+      if(answered){
+        if(q.answer.includes(o.charAt(0)))cls+=' correct';
+        else if(item._examAnswer&&item._examAnswer.includes(o.charAt(0)))cls+=' wrong';
+      }
+      html+='<button class="'+cls+'" onclick="answerExam(''+o.charAt(0)+'')"'+(answered?' disabled':'')+'>'+escHtml(o)+'</button>';
+    });
+    html+='</div>';
+  } else if(q.type==='judge'){
+    if(!answered){
+      html+='<div style="display:flex;gap:8px"><button class="qp-option" onclick="answerExam('✓')" style="flex:1;max-width:120px">✓ 正确</button><button class="qp-option" onclick="answerExam('×')" style="flex:1;max-width:120px">× 错误</button></div>';
+    }
+  }
+  if(answered){
+    var c=q.answer.includes(item._examAnswer)||q.answer===item._examAnswer;
+    html+='<div class="qp-result show '+(c?'correct':'wrong')+'"><span class="r-icon">'+(c?'✅':'❌')+'</span><span class="r-text">'+(c?'正确！':'错误')+'</span>'+
+      '<div class="r-detail">正确答案：'+escHtml(q.answer)+(c?'':' · 你的答案：'+escHtml(item._examAnswer))+'</div></div>'+
+      (q.explain?'<div class="qp-explain show"><div class="l">📖 解析</div><div class="v">'+escHtml(q.explain)+'</div></div>':'');
+    html+='<div class="qp-nav"><button class="btn '+(examQIndex<examStats.total-1?'btn-next':'btn-finish')+'" onclick="nextExam()">'+(examQIndex<examStats.total-1?'下一题 →':'查看成绩 🎯')+'</button></div>';
+  }
+  html+='</div>';
+  document.getElementById('page-exam').innerHTML=html;
+  document.getElementById('headerTitle').textContent='📜 '+(examQIndex+1)+'/'+examStats.total;
+}
+
+function answerExam(ans){
+  if(!ans)return;
+  var item=examQs[examQIndex],q=item.q;
+  if(q._examAnswered)return;
+  item._examAnswer=ans;q._examAnswered=true;
+  var c=q.answer.includes(ans)||q.answer===ans;
+  if(c)examStats.correct++;else examStats.wrong++;
+  recordAnswer(item.subject,q.id,c);
+  if(!c)addWrong(item.subject,q.id,ans);
+  showExamQ();
+}
+
+function nextExam(){
+  examQIndex++;showExamQ();
+  document.getElementById('page-exam').scrollTop=0;
+}
+
+function showExamResult(){
+  var t=examStats.total,c=examStats.correct,w=examStats.wrong;
+  var pct=t>0?Math.round(c/t*100):0;
+  var icon=pct>=80?'🎉':pct>=60?'👍':'💪';
+  var txt=pct>=80?'优秀！':pct>=60?'继续加油！':'需要多练习！';
+  var done=parseInt(localStorage.getItem('ica_done')||'0')+t;
+  localStorage.setItem('ica_done',done);
+  var html='<div class="exam-result"><div class="er-icon">'+icon+'</div><div class="er-title">'+(examMode==='mock'?'模拟考试完成！':'真题练习完成！')+'</div><div class="er-sub">'+txt+'</div>'+
+    '<div class="er-bar"><div class="fl" style="width:'+pct+'%;background:'+(pct>=80?'var(--green)':pct>=60?'var(--orange)':'var(--red)')+'"></div></div>'+
+    '<div class="er-stats"><div class="er-stat"><div class="es-num" style="color:var(--blue)">'+t+'</div><div class="es-label">总题数</div></div>'+
+    '<div class="er-stat"><div class="es-num" style="color:var(--green)">'+c+'</div><div class="es-label">正确</div></div>'+
+    '<div class="er-stat"><div class="es-num" style="color:var(--red)">'+w+'</div><div class="es-label">错误</div></div></div>'+
+    '<div style="gap:10px;display:flex;justify-content:center;flex-wrap:wrap">'+
+    '<button class="qpr-btn primary" onclick="goHome()">返回首页</button>'+
+    (w>0?'<button class="qpr-btn outline" onclick="goWrong()">查看错题</button>':'')+
+    '</div></div>';
+  pageStack.push('exresult');showPage('exresult');
+  document.getElementById('page-exresult').innerHTML=html;
+  document.getElementById('headerTitle').textContent='📊 答题结果';
+  updateStats();
+}
+
+// ====== Mock Exam ======
+function showMockConfig(){
+  pageStack.push('exam');showPage('exam');
+  document.getElementById('headerTitle').textContent='🎯 模拟考场';
+  var html='<div class="mock-config"><div class="mc-title">🎯 ICA模拟考场</div>'+
+    '<div class="mc-sub">全真模拟考试 · 三科混合出题</div>'+
+    '<div class="mc-stat"><div><div class="ms-num">30</div><div class="ms-label">总题数</div></div>'+
+    '<div><div class="ms-num">30min</div><div class="ms-label">考试时间</div></div>'+
+    '<div><div class="ms-num">150</div><div class="ms-label">满分</div></div></div>'+
+    '<button class="mc-btn" onclick="startMock()">开始考试</button></div>';
+  document.getElementById('page-exam').innerHTML=html;
+}
+
+function startMock(){
+  var all=[];
+  tabSubjects.forEach(function(s){
+    (subjectData[s]||[]).forEach(function(q){all.push({q:q,subject:s});});
+  });
+  shuffle(all);
+  // Pick 30 random questions, ~10 per subject
+  var picked=all.slice(0,30);
+  examQs=picked;examQIndex=0;examMode='mock';
+  examStats={total:picked.length,correct:0,wrong:0};
+  examTimeLeft=30*60; // 30 minutes
+  // Start timer
+  if(examTimer)clearInterval(examTimer);
+  examTimer=setInterval(function(){
+    examTimeLeft--;
+    updateExamTimer();
+    if(examTimeLeft<=0){clearInterval(examTimer);examTimer=null;showExamResult();}
+  },1000);
+  showExamQ();
+}
+
+function updateExamTimer(){
+  var el=document.querySelector('.eh-timer');
+  if(!el)return;
+  var m=Math.floor(examTimeLeft/60),s=examTimeLeft%60;
+  el.textContent='⏱ '+m+':'+(s<10?'0':'')+s;
+  el.classList.toggle('warning',examTimeLeft<60);
+}
+
+// Override showExamQ to include timer for mock
+var _origShowExamQ=showExamQ;
+showExamQ=function(){
+  if(examQIndex>=examQs.length){
+    if(examTimer){clearInterval(examTimer);examTimer=null;}
+    showExamResult();return;
+  }
+  var item=examQs[examQIndex],q=item.q,s=item.subject;
+  pageStack.push('exam');showPage('exam');
+  document.getElementById('headerTitle').textContent=examMode==='mock'?'🎯 模拟考场':'📜 '+(examQIndex+1)+'/'+examStats.total;
+  var answered=q._examAnswered;
+  var tm=examMode==='mock'?'<span class="eh-timer" id="examTimer">⏱ 30:00</span>':'';
+  var html='<div class="exam-header">'+tm+'<span class="eh-progress">'+(examQIndex+1)+'/'+examStats.total+(examMode==='mock'?'':' · '+names[s])+'</span><span class="eh-score">✅'+examStats.correct+' ❌'+examStats.wrong+'</span></div>'+
+    '<div class="exam-card"><div class="exam-meta">'+(examMode==='mock'?names[s]+' · ':'')+typeNames[q.type]+(q.year?' · '+q.year:'')+'</div>'+
+    '<div class="exam-text">'+escHtml(q.text)+'</div>';
+  if(q.type==='choice'&&q.options&&q.options.length>0){
+    html+='<div class="exam-options">';
+    q.options.forEach(function(o,j){
+      var cls='qp-option';
+      if(answered){
+        if(q.answer.includes(o.charAt(0)))cls+=' correct';
+        else if(item._examAnswer&&item._examAnswer.includes(o.charAt(0)))cls+=' wrong';
+      }
+      html+='<button class="'+cls+'" onclick="answerExam(''+o.charAt(0)+'')"'+(answered?' disabled':'')+'>'+escHtml(o)+'</button>';
+    });
+    html+='</div>';
+  } else if(q.type==='judge'){
+    if(!answered){
+      html+='<div style="display:flex;gap:8px"><button class="qp-option" onclick="answerExam('✓')" style="flex:1;max-width:120px">✓ 正确</button><button class="qp-option" onclick="answerExam('×')" style="flex:1;max-width:120px">× 错误</button></div>';
+    }
+  }
+  if(answered){
+    var c=q.answer.includes(item._examAnswer)||q.answer===item._examAnswer;
+    html+='<div class="qp-result show '+(c?'correct':'wrong')+'"><span class="r-icon">'+(c?'✅':'❌')+'</span><span class="r-text">'+(c?'正确！':'错误')+'</span>'+
+      '<div class="r-detail">正确答案：'+escHtml(q.answer)+(c?'':' · 你的答案：'+escHtml(item._examAnswer))+'</div></div>'+
+      (q.explain?'<div class="qp-explain show"><div class="l">📖 解析</div><div class="v">'+escHtml(q.explain)+'</div></div>':'');
+    html+='<div class="qp-nav"><button class="btn '+(examQIndex<examStats.total-1?'btn-next':'btn-finish')+'" onclick="nextExam()">'+(examQIndex<examStats.total-1?'下一题 →':'查看成绩 🎯')+'</button></div>';
+  }
+  html+='</div>';
+  document.getElementById('page-exam').innerHTML=html;
+  if(examMode==='mock'&&examTimer)updateExamTimer();
+}
+
+// Also update showExamResult for mock exam scoring
+var _origShowExamResult=showExamResult;
+showExamResult=function(){
+  if(examTimer){clearInterval(examTimer);examTimer=null;}
+  var t=examStats.total,c=examStats.correct,w=examStats.wrong;
+  var pct=t>0?Math.round(c/t*100):0;
+  var icon=pct>=80?'🎉':pct>=60?'👍':'💪';
+  var txt=pct>=80?'优秀！':pct>=60?'继续加油！':'需要多练习！';
+  var done=parseInt(localStorage.getItem('ica_done')||'0')+t;
+  localStorage.setItem('ica_done',done);
+  var title=examMode==='mock'?'🎯 模拟考试完成！':'📜 真题练习完成！';
+  var html='<div class="exam-result"><div class="er-icon">'+icon+'</div><div class="er-title">'+title+'</div><div class="er-sub">'+txt+'</div>'+
+    '<div class="er-bar"><div class="fl" style="width:'+pct+'%;background:'+(pct>=80?'var(--green)':pct>=60?'var(--orange)':'var(--red)')+'"></div></div>'+
+    '<div class="er-stats"><div class="er-stat"><div class="es-num" style="color:var(--blue)">'+t+'</div><div class="es-label">总题数</div></div>'+
+    '<div class="er-stat"><div class="es-num" style="color:var(--green)">'+c+'</div><div class="es-label">正确</div></div>'+
+    '<div class="er-stat"><div class="es-num" style="color:var(--red)">'+w+'</div><div class="es-label">错误</div></div></div>'+
+    '<div style="gap:10px;display:flex;justify-content:center;flex-wrap:wrap">'+
+    '<button class="qpr-btn primary" onclick="goHome()">返回首页</button>'+
+    (w>0?'<button class="qpr-btn outline" onclick="goWrong()">查看错题</button>':'')+
+    '</div></div>';
+  pageStack.push('exresult');showPage('exresult');
+  document.getElementById('page-exresult').innerHTML=html;
+  document.getElementById('headerTitle').textContent='📊 答题结果';
+  updateStats();
+};
+
+// ====== Desktop Exam ======
+function dShowPapers(){dSwitchPage('papers');}
+function dShowMockConfig(){dSwitchPage('mock');}
+
+// Override dSwitchPage to handle papers and mock
+var _origDSwitchPage=dSwitchPage;
+dSwitchPage=function(page){
+  document.querySelectorAll('.s-nav').forEach(function(n){n.classList.toggle('active',n.getAttribute('data-dpage')===page);});
+  if(page==='home'){dRenderHome();return;}
+  if(page==='wrong'){dRenderWrong();return;}
+  if(page==='culture'||page==='xh'||page==='ll'){dRenderSubject(page);return;}
+  if(page==='papers'){
+    document.getElementById('dHeaderTitle').textContent='📜 历年真题';
+    document.getElementById('dHeaderSub').textContent='';
+    var papers=getExamPapers();
+    var body='<div style="display:flex;flex-wrap:wrap;gap:12px">'+
+      papers.map(function(p){return '<div onclick="dStartPaper(\''+p.id+'\')" style="background:var(--card);border-radius:var(--radius);padding:20px;border:1.5px solid var(--border);cursor:pointer;width:240px;transition:all .15s"><div style="font-size:28px;margin-bottom:8px">📜</div><div style="font-size:15px;font-weight:600">'+p.name+'</div><div style="font-size:12px;color:var(--text3);margin-top:4px">'+p.count+' 题 · 三科综合</div></div>';}).join('')+
+      '</div>';
+    document.getElementById('dBody').innerHTML=body;
+    return;
+  }
+  if(page==='mock'){
+    document.getElementById('dHeaderTitle').textContent='🎯 模拟考场';
+    document.getElementById('dHeaderSub').textContent='';
+    document.getElementById('dBody').innerHTML=
+      '<div class="mock-config" style="max-width:500px"><div class="mc-title">🎯 ICA模拟考试</div>'+
+      '<div class="mc-sub">三科混合随机抽题 · 限时30分钟</div>'+
+      '<div class="mc-stat"><div><div class="ms-num">30</div><div class="ms-label">总题数</div></div>'+
+      '<div><div class="ms-num">30min</div><div class="ms-label">考试时间</div></div>'+
+      '<div><div class="ms-num">150</div><div class="ms-label">满分</div></div></div>'+
+      '<button class="mc-btn" onclick="dStartMock()">开始考试</button></div>';
+    return;
+  }
+};
+
+function dStartPaper(pid){
+  startPaper(pid);
+  // Read the exam page content and put it in desktop body
+  setTimeout(function(){
+    var body=document.getElementById('page-exam').innerHTML;
+    if(body){
+      document.getElementById('dBody').innerHTML=body;
+      document.getElementById('dHeaderTitle').textContent='📜 真题练习';
+      document.getElementById('dHeaderSub').textContent='';
+    }
+  },50);
+}
+
+function dStartMock(){
+  startMock();
+  setTimeout(function(){
+    var body=document.getElementById('page-exam').innerHTML;
+    if(body){
+      document.getElementById('dBody').innerHTML=body;
+      document.getElementById('dHeaderTitle').textContent='🎯 模拟考场';
+      document.getElementById('dHeaderSub').textContent='';
+    }
+  },50);
+}
 
 (function(){var u=sessionStorage.getItem('ica_user');if(u&&ACCOUNTS.hasOwnProperty(u))enterApp(u);else document.getElementById('loginId').focus();})();
 </script>
