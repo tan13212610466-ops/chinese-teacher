@@ -616,28 +616,68 @@ function renderSubject(s){
   document.getElementById('headerTitle').textContent=icons[s]+' '+names[s];
 }
 
-// ====== Practice ======
-function startPractice(s){startPracticeCustom(subjectData[s]||[],s);}
-function startPracticeFromList(s,idx){
-  var data=subjectData[s]||[];
-  startPracticeCustom(data,s);
+// ====== Progress Tracking ======
+function getProgress(){
+  try{return JSON.parse(localStorage.getItem('ica_progress'))||{};}
+  catch(e){return {};}
 }
+function saveProgress(p){localStorage.setItem('ica_progress',JSON.stringify(p));}
+function getSubjectProgress(s){
+  var p=getProgress();
+  if(!p[s])p[s]={};
+  return p[s];
+}
+function recordAnswer(s,qId,correct){
+  var p=getProgress();
+  if(!p[s])p[s]={};
+  if(!p[s][qId])p[s][qId]={correct:0,wrong:0};
+  if(correct)p[s][qId].correct++;
+  else p[s][qId].wrong++;
+  saveProgress(p);
+}
+function getQuestionPriority(s,qId){
+  var sp=getSubjectProgress(s);
+  var rec=sp[qId];
+  if(!rec)return 0; // unseen = highest priority
+  if(rec.wrong>0)return 1; // wrong = high priority
+  return 2; // correct only = low priority
+}
+function sortPracticeQs(qs,s){
+  var sp=getSubjectProgress(s);
+  // Sort: wrong first, unseen second, correct-only last
+  return qs.sort(function(a,b){
+    var pa=getPriority(sp,a.q.id);
+    var pb=getPriority(sp,b.q.id);
+    if(pa!==pb)return pa-pb;
+    return Math.random()-0.5; // same priority = random
+  });
+}
+function getPriority(sp,id){
+  var rec=sp[id];
+  if(!rec)return 0;
+  if(rec.wrong>0 && rec.wrong>=rec.correct)return 0; // still struggling
+  if(rec.wrong>0 && rec.wrong<rec.correct)return 1; // improving
+  return 2; // mastered
+}
+function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}}
+
+function startPractice(s){startPracticeCustom(subjectData[s]||[],s);}
+function startPracticeFromList(s,idx){startPracticeCustom(subjectData[s]||[],s);}
 function startRandomPractice(){
   var all=[];
   tabSubjects.forEach(function(s){(subjectData[s]||[]).forEach(function(q){all.push({q:q,subject:s});});});
   shuffle(all);
   practiceQs=all;currentQIndex=0;
-  practiceStats={total:all.length,correct:0,wrong:0};
+  practiceStats={total:all.length,correct:0,wrong:0,subject:s};
   showPractice();
 }
 function startPracticeCustom(data,subject){
   var qs=data.map(function(q){return{q:q,subject:subject};});
-  shuffle(qs);
+  qs=sortPracticeQs(qs,subject);
   practiceQs=qs;currentQIndex=0;currentSubject=subject;
-  practiceStats={total:qs.length,correct:0,wrong:0};
+  practiceStats={total:qs.length,correct:0,wrong:0,subject:subject};
   showPractice();
 }
-function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}}
 
 function showPractice(){
   if(currentQIndex>=practiceQs.length){showResult();return;}
@@ -699,6 +739,7 @@ function answerPractice(ans){
   q._answered=true;
   var correct=q.answer.includes(ans)||q.answer===ans;
   if(correct)practiceStats.correct++;else practiceStats.wrong++;
+  recordAnswer(item.subject,q.id,correct);
   if(!correct)addWrong(item.subject,q.id,ans);
   var done=parseInt(localStorage.getItem('ica_done')||'0')+1;
   localStorage.setItem('ica_done',done);
