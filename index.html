@@ -291,10 +291,18 @@ input,select,textarea,button{font-family:inherit;font-size:inherit}
     <div class="logo-title">ICA国际汉语教师</div>
     <div class="logo-sub">证书考试 · 笔试刷题系统</div>
   </div>
-  <div class="error-msg" id="errorMsg" style="display:none"><span class="err-icon">⚠️</span><span id="errorText">密码错误</span></div>
+  <div class="error-msg" id="errorMsg"><span class="err-icon">⚠️</span><span id="errorText">账号或密码错误</span></div>
   <div class="form-group">
-    <label class="form-label">🔑 请输入密码</label>
-    <div class="input-wrap"><input type="password" id="loginPw" placeholder="请输入密码" maxlength="30" style="padding:14px 16px"><button class="toggle-pw" id="togglePw" type="button">👁️</button></div>
+    <label class="form-label">账号</label>
+    <div class="input-wrap"><span class="input-icon">👤</span><input type="text" id="loginId" placeholder="请输入账号" maxlength="30"></div>
+  </div>
+  <div class="form-group">
+    <label class="form-label">密码</label>
+    <div class="input-wrap"><span class="input-icon">🔒</span><input type="password" id="loginPw" placeholder="请输入密码" maxlength="30"><button class="toggle-pw" id="togglePw" type="button">👁️</button></div>
+  </div>
+  <div class="remember-row">
+    <label><input type="checkbox" id="rememberMe"> 记住密码</label>
+    <span style="font-size:12px;color:var(--text3)">admin / teacher / dev / user</span>
   </div>
   <button class="btn-login" id="loginBtn">登 录</button>
   <div class="login-footer">ICA International Chinese Language Teacher Certification</div>
@@ -529,8 +537,8 @@ subjectData.ll = [
 ];
 
 // ====== Accounts ======
-var PASSCODE = '111';
-var currentUser = 'user';
+var ACCOUNTS = {admin:'admin123',teacher:'teacher123',dev:'dev123',user:'111',test:'123'};
+var currentUser = '';
 var currentSubject = '', currentQIndex = 0, practiceQs = [];
 var practiceStats = {total:0,correct:0,wrong:0};
 var tabSubjects = ['culture','xh','ll'];
@@ -545,20 +553,25 @@ var pageStack = ['home'];
 // Login - Event listeners (reliable on mobile)
 document.getElementById('togglePw').addEventListener('click',function(){var p=document.getElementById('loginPw');p.type=p.type==='password'?'text':'password';this.textContent=p.type==='password'?'👁️':'🙈';});
 document.getElementById('loginPw').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
+document.getElementById('loginId').addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('loginPw').focus();});
 document.getElementById('loginBtn').addEventListener('click',function(e){e.preventDefault();doLogin();});
+(function(){var s=localStorage.getItem('ica_remember');if(s){try{var d=JSON.parse(s);if(d&&d.id){document.getElementById('loginId').value=d.id;document.getElementById('loginPw').value=d.pw||'';document.getElementById('rememberMe').checked=true;}}catch(e){}}})();
 
 function doLogin(){
   var b=document.getElementById('loginBtn'),e=document.getElementById('errorMsg'),t=document.getElementById('errorText');
-  e.style.display='none';
-  var p=document.getElementById('loginPw').value.trim();
-  if(!p){t.textContent='请输入密码';e.style.display='flex';document.getElementById('loginPw').focus();return;}
+  e.classList.remove('show');
+  var i=document.getElementById('loginId').value.trim(),p=document.getElementById('loginPw').value.trim();
+  if(!i){t.textContent='请输入账号';e.classList.add('show');document.getElementById('loginId').focus();return;}
+  if(!p){t.textContent='请输入密码';e.classList.add('show');document.getElementById('loginPw').focus();return;}
   b.disabled=true;b.textContent='验证中...';
   setTimeout(function(){
-    if(p===PASSCODE){
-      sessionStorage.setItem('ica_logged','1');
-      enterApp('user');
+    if(ACCOUNTS.hasOwnProperty(i)&&ACCOUNTS[i]===p){
+      currentUser=i;
+      if(document.getElementById('rememberMe').checked)localStorage.setItem('ica_remember',JSON.stringify({id:i,pw:p}));
+      else localStorage.removeItem('ica_remember');
+      sessionStorage.setItem('ica_user',i);enterApp(i);
     } else {
-      t.textContent='密码错误，请重试';e.style.display='flex';
+      t.textContent='账号或密码错误';e.classList.add('show');
       document.getElementById('loginPw').value='';document.getElementById('loginPw').focus();
       b.disabled=false;b.textContent='登 录';
     }
@@ -566,7 +579,7 @@ function doLogin(){
 }
 
 function enterApp(user){
-  currentUser=user||'user';
+  currentUser=user;
   document.getElementById('pageLogin').classList.add('hide');
   document.getElementById('pageApp').classList.add('show');
   var d=window.innerWidth>=768;
@@ -579,7 +592,7 @@ function enterApp(user){
 
 function doLogout(){
   if(!confirm('确定退出？'))return;
-  currentUser='';sessionStorage.removeItem('ica_logged');
+  currentUser='';sessionStorage.removeItem('ica_user');
   document.getElementById('pageLogin').classList.remove('hide');
   document.getElementById('pageApp').classList.remove('show');
   document.getElementById('loginPw').value='';
@@ -1388,7 +1401,7 @@ function dStartMock(){
   },50);
 }
 
-(function(){if(sessionStorage.getItem('ica_logged'))enterApp('user');else document.getElementById('loginPw').focus();})();
+(function(){var u=sessionStorage.getItem('ica_user');if(u&&ACCOUNTS.hasOwnProperty(u))enterApp(u);else document.getElementById('loginId').focus();})();
 </script>
 </body>
 </html>
