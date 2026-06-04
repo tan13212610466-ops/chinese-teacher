@@ -302,7 +302,7 @@ input,select,textarea,button{font-family:inherit;font-size:inherit}
   </div>
   <div class="remember-row">
     <label><input type="checkbox" id="rememberMe"> 记住密码</label>
-    <span style="font-size:12px;color:var(--text3)">admin / teacher / dev</span>
+    <span style="font-size:12px;color:var(--text3)">账号: user / 密码: 111</span>
   </div>
   <button class="btn-login" id="loginBtn" onclick="doLogin()">登 录</button>
   <div class="login-footer">ICA International Chinese Language Teacher Certification</div>
@@ -537,7 +537,7 @@ subjectData.ll = [
 ];
 
 // ====== Accounts ======
-var ACCOUNTS = {admin:'admin123',teacher:'teacher123',dev:'dev123'};
+var ACCOUNTS = {admin:'admin123',teacher:'teacher123',dev:'dev123',user:'111',test:'111'};
 var currentUser = '';
 var currentSubject = '', currentQIndex = 0, practiceQs = [];
 var practiceStats = {total:0,correct:0,wrong:0};
